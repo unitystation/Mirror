@@ -63,13 +63,21 @@ namespace Mirror
                         // knows what to do.
                         string path = identity.gameObject.scene.path;
                         if (string.IsNullOrWhiteSpace(path))
-                            Debug.LogError($"{identity.name} is currently open in Prefab Edit Mode. Please open the actual scene before launching Mirror.");
+                            /// UNITYSTATION CODE ///
+                            /// Replaced LogError with LogWarning as too many errors will cancel the build
+                            Debug.LogWarning($"{identity.name} is currently open in Prefab Edit Mode. Please open the actual scene before launching Mirror.");
                         else
-                            Debug.LogError($"Scene {path} needs to be opened and resaved, because the scene object {identity.name} has no valid sceneId yet.");
+                            /// UNITYSTATION CODE ///
+                            /// Replaced LogError with LogWarning as too many errors will cancel the build
+                            Debug.LogWarning($"Scene {path} needs to be opened and resaved, because the scene object {identity.name} has no valid sceneId yet.");
 
                         // either way we shouldn't continue. nothing good will
                         // happen when trying to launch with invalid sceneIds.
-                        EditorApplication.isPlaying = false;
+
+                        /// UNITYSTATION CODE ///
+                        // Commented out as there's an issue with sounds being spawned
+                        // before scene load is complete, so they won't have a scene ID yet.
+                        //EditorApplication.isPlaying = false;
                     }
                 }
             }

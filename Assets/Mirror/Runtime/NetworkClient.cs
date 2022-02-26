@@ -439,6 +439,22 @@ namespace Mirror
         }
 
         // message handlers ////////////////////////////////////////////////////
+        /// UNITYSTATION CODE ///
+        // Adds back this obsolete method because updating the usage of it looks like a pain.
+        /// <summary>Register a handler for a message type T. Most should require authentication.</summary>
+        // Deprecated 2021-03-13
+        [Obsolete("Use RegisterHandler<T> version without NetworkConnection parameter. It always points to NetworkClient.connection anyway.")]
+        public static void RegisterHandler<T>(Action<NetworkConnection, T> handler, bool requireAuthentication = true)
+            where T : struct, NetworkMessage
+        {
+            ushort msgType = MessagePacking.GetId<T>();
+            if (handlers.ContainsKey(msgType))
+            {
+                Debug.LogWarning($"NetworkClient.RegisterHandler replacing handler for {typeof(T).FullName}, id={msgType}. If replacement is intentional, use ReplaceHandler instead to avoid this warning.");
+            }
+            handlers[msgType] = MessagePacking.WrapHandler(handler, requireAuthentication);
+        }
+
         /// <summary>Register a handler for a message type T. Most should require authentication.</summary>
         public static void RegisterHandler<T>(Action<T> handler, bool requireAuthentication = true)
             where T : struct, NetworkMessage
@@ -1073,6 +1089,10 @@ namespace Mirror
             if (spawnHandlers.TryGetValue(message.assetId, out SpawnHandlerDelegate handler))
             {
                 GameObject obj = handler(message);
+                /// UNITYSTATION CODE ///
+                // Update the localPosition for mapped objects as they may have been moved.
+                obj.transform.localPosition = message.position;
+
                 if (obj == null)
                 {
                     Debug.LogError($"Spawn Handler returned null, Handler assetId '{message.assetId}'");
@@ -1334,10 +1354,16 @@ namespace Mirror
                 // scene object.. disable it in scene instead of destroying
                 else
                 {
-                    localObject.gameObject.SetActive(false);
-                    spawnableObjects[localObject.sceneId] = localObject;
-                    // reset for scene objects
-                    localObject.Reset();
+                    /// UNITYSTATION CODE ///
+                    // Why? Because for some reason Mirror wants to treat seen objects as special.
+                    // It's better to just destroy the object so we don't get inconsistent behaviour
+                    // between something that spawned in and something that was put in the scene.
+                    GameObject.Destroy(localObject.gameObject);
+
+                    //localObject.gameObject.SetActive(false);
+                    //spawnableObjects[localObject.sceneId] = localObject;
+                    //// reset for scene objects
+                    //localObject.Reset();
                 }
 
                 // remove from dictionary no matter how it is unspawned
