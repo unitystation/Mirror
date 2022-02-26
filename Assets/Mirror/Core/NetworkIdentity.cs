@@ -247,6 +247,67 @@ namespace Mirror
             observersWriter = new NetworkWriter()
         };
 
+        /// <summary>Prefab GUID used to spawn prefabs across the network.</summary>
+        //
+        // The AssetId trick:
+        //   Ideally we would have a serialized 'Guid m_AssetId' but Unity can't
+        //   serialize it because Guid's internal bytes are private
+        //
+        //   UNET used 'NetworkHash128' originally, with byte0, ..., byte16
+        //   which works, but it just unnecessary extra code
+        //
+        //   Using just the Guid string would work, but it's 32 chars long and
+        //   would then be sent over the network as 64 instead of 16 bytes
+        //
+        // => The solution is to serialize the string internally here and then
+        //    use the real 'Guid' type for everything else via .assetId
+        public Guid assetId
+        {
+            get
+            {
+#if UNITY_EDITOR
+                // This is important because sometimes OnValidate does not run (like when adding view to prefab with no child links)
+                if (string.IsNullOrWhiteSpace(m_AssetId))
+                    SetupIDs();
+#endif
+                // convert string to Guid and use .Empty to avoid exception if
+                // we would use 'new Guid("")'
+                return string.IsNullOrWhiteSpace(m_AssetId) ? Guid.Empty : new Guid(m_AssetId);
+            }
+            internal set
+            {
+                string newAssetIdString = value == Guid.Empty ? string.Empty : value.ToString("N");
+                string oldAssetIdString = m_AssetId;
+
+                // they are the same, do nothing
+                if (oldAssetIdString == newAssetIdString)
+                {
+                    return;
+                }
+
+                // new is empty
+                if (string.IsNullOrWhiteSpace(newAssetIdString))
+                {
+                    Debug.LogError($"Can not set AssetId to empty guid on NetworkIdentity '{name}', old assetId '{oldAssetIdString}'");
+                    return;
+                }
+
+                // old not empty
+                if (!string.IsNullOrWhiteSpace(oldAssetIdString))
+                {
+                    /// UNITYSTATION CODE ///
+                    // Would be nice to have the reason why it complains if it's set wrong.
+                    //Debug.LogError($"Can not Set AssetId on NetworkIdentity '{name}' because it already had an assetId, current assetId '{oldAssetIdString}', attempted new assetId '{newAssetIdString}'");
+                    return;
+                }
+
+                // old is empty
+                m_AssetId = newAssetIdString;
+                // Debug.Log($"Settings AssetId on NetworkIdentity '{name}', new assetId '{newAssetIdString}'");
+            }
+        }
+        [SerializeField, HideInInspector] string m_AssetId;
+
         // Keep track of all sceneIds to detect scene duplicates
         static readonly Dictionary<ulong, NetworkIdentity> sceneIds =
             new Dictionary<ulong, NetworkIdentity>();
@@ -777,6 +838,14 @@ namespace Mirror
             clientStarted = true;
 
             // Debug.Log($"OnStartClient {gameObject} netId:{netId}");
+            /// UNITYSTATION CODE ///
+            // TODO: explanation
+            if (NetworkBehaviours == null)
+            {
+                Debug.LogError($"NetworkBehaviours is null on {Utils.GetGameObjectPath(gameObject)} at position {gameObject.transform.localPosition}.");
+                return;
+            }
+
             foreach (NetworkBehaviour comp in NetworkBehaviours)
             {
                 // an exception in OnStartClient should be caught, so that one

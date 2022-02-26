@@ -71,6 +71,13 @@ namespace Mirror
                         // either way we shouldn't continue. nothing good will
                         // happen when trying to launch with invalid sceneIds.
                         /// UNITYSTATION CODE ///
+
+                        // either way we shouldn't continue. nothing good will
+                        // happen when trying to launch with invalid sceneIds.
+
+                        /// UNITYSTATION CODE ///
+                        // Commented out as there's an issue with sounds being spawned
+                        // before scene load is complete, so they won't have a scene ID yet.
                         //EditorApplication.isPlaying = false;
                     }
                 }

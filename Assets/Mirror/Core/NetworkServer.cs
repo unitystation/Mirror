@@ -22,6 +22,7 @@ namespace Mirror
         /// CUSTOM UNITYSTATION CODE Somewhere to put the logs from all the threads of errors
         /// </summary>
         public static string LogString = "";
+                = new Dictionary<NetworkConnectionToClient, List<UnityEngine.SceneManagement.Scene>>();
 
         static bool initialized;
         public static int maxConnections;
@@ -1637,6 +1638,81 @@ namespace Mirror
             if (localConnection != null && localConnection.isReady)
             {
                 identity.AddObserver(localConnection);
+                newObservers.Add(identity.connectionToClient);
+            }
+
+            bool changed = false;
+
+            // add all newObservers that aren't in .observers yet
+            foreach (NetworkConnectionToClient conn in newObservers)
+            {
+                // only add ready connections.
+                // otherwise the player might not be in the world yet or anymore
+                if (conn != null && conn.isReady)
+                {
+                    if (initialize || !identity.observers.ContainsKey(conn.connectionId))
+                    {
+                        // new observer
+                        conn.AddToObserving(identity);
+                        // Debug.Log($"New Observer for {gameObject} {conn}");
+                        changed = true;
+                    }
+                }
+            }
+
+            // remove all old .observers that aren't in newObservers anymore
+            foreach (NetworkConnectionToClient conn in identity.observers.Values)
+            {
+                if (!newObservers.Contains(conn))
+                {
+                    // removed observer
+                    conn.RemoveFromObserving(identity, false);
+                    // Debug.Log($"Removed Observer for {gameObjec} {conn}");
+                    changed = true;
+                }
+            }
+
+            // copy new observers to observers
+            if (changed)
+            {
+                identity.observers.Clear();
+                foreach (NetworkConnectionToClient conn in newObservers)
+                {
+                    if (conn != null && conn.isReady)
+                        /// UNITYSTATION CODE ///
+                        // Use [] instead of Add(). TODO: explanation
+                        identity.observers[conn.connectionId] = conn;
+                }
+            }
+
+            // special case for host mode: we use SetHostVisibility to hide
+            // NetworkIdentities that aren't in observer range from host.
+            // this is what games like Dota/Counter-Strike do too, where a host
+            // does NOT see all players by default. they are in memory, but
+            // hidden to the host player.
+            //
+            // this code is from UNET, it's a bit strange but it works:
+            // * it hides newly connected identities in host mode
+            //   => that part was the intended behaviour
+            // * it hides ALL NetworkIdentities in host mode when the host
+            //   connects but hasn't selected a character yet
+            //   => this only works because we have no .localConnection != null
+            //      check. at this stage, localConnection is null because
+            //      StartHost starts the server first, then calls this code,
+            //      then starts the client and sets .localConnection. so we can
+            //      NOT add a null check without breaking host visibility here.
+            // * it hides ALL NetworkIdentities in server-only mode because
+            //   observers never contain the 'null' .localConnection
+            //   => that was not intended, but let's keep it as it is so we
+            //      don't break anything in host mode. it's way easier than
+            //      iterating all identities in a special function in StartHost.
+            if (initialize)
+            {
+                if (!newObservers.Contains(localConnection))
+                {
+                    if (aoi != null)
+                        aoi.SetHostVisibility(identity, false);
+                }
             }
         }
 
@@ -1663,8 +1739,8 @@ namespace Mirror
             /// UNITYSTATION CODE ///
             // Condition (OR) "identity.visible == Visibility.ForceShown" was removed so our custom scene check always works.
             // Add it back if we switch over to spatial management.
-            if (aoi == null)
-            //if (aoi == null || identity.visible == Visibility.ForceShown)
+            //if (aoi == null)
+            if (aoi == null || identity.visible == Visibility.ForceShown)
             {
                 RebuildObserversDefault(identity, initialize);
             }
@@ -1723,7 +1799,15 @@ namespace Mirror
                 // get serialization for this entity viewed by this connection
                 // (if anything was serialized this time)
                 NetworkWriter serialization = SerializeForConnection(identity, connection);
-                if (serialization != null)
+                // make sure it's not null or destroyed.
+                // (which can happen if someone uses
+                //  GameObject.Destroy instead of
+                //  NetworkServer.Destroy)
+
+                /// UNITYSTATION CODE ///
+                // Null checks are slow: changed condition.
+                // if (identity != null)
+                if (identity.isDirty && serialization != null)
                 {
                     EntityStateMessage message = new EntityStateMessage
                     {
@@ -1734,6 +1818,13 @@ namespace Mirror
                 }
 
                 connection.DirtyObserving[i] = null;
+                // spawned list should have no null entries because we
+                // always call Remove in OnObjectDestroy everywhere.
+                // if it does have null then someone used
+                // GameObject.Destroy instead of NetworkServer.Destroy.
+                /// UNITYSTATION CODE ///
+                // Comment out this warning (we now assume identity is not null as it is faster).
+                //else Debug.LogWarning($"Found 'null' entry in observing list for connectionId={connection.connectionId}. Please call NetworkServer.Destroy to destroy networked objects. Don't use GameObject.Destroy.");
             }
         }
 
