@@ -9,6 +9,13 @@ namespace Mirror
     /// <summary>NetworkServer handles remote connections and has a local connection for a local client.</summary>
     public static class NetworkServer
     {
+        /// <summary>
+        /// UNITYSTATION CODE ///
+        /// The definitive list of scenes that a client connection is allowed to observe (server only).
+        /// </summary>
+        public static Dictionary<NetworkConnectionToClient, List<UnityEngine.SceneManagement.Scene>> observerSceneList
+                = new Dictionary<NetworkConnectionToClient, List<UnityEngine.SceneManagement.Scene>>();
+
         static bool initialized;
         public static int maxConnections;
 
@@ -59,6 +66,10 @@ namespace Mirror
         {
             if (initialized)
                 return;
+
+            /// UNITYSTATION CODE ///
+            // Allows Mirror to play nice with Domain Reloading disabled.
+            isLoadingScene = false;
 
             // Debug.Log($"NetworkServer Created version {Version.Current}");
 
@@ -817,7 +828,9 @@ namespace Mirror
                 // This needs to be sent to clear isLocalPlayer on
                 // client while keeping hasAuthority true
                 SendChangeOwnerMessage(previousPlayer, conn);
-            else
+            /// UNITYSTATION CODE ///
+            // Add nullcheck. TODO: explanation
+            else if (previousPlayer != null)
                 // This clears both isLocalPlayer and hasAuthority on client
                 previousPlayer.RemoveClientAuthority();
 
@@ -1495,7 +1508,9 @@ namespace Mirror
                 foreach (NetworkConnectionToClient conn in newObservers)
                 {
                     if (conn != null && conn.isReady)
-                        identity.observers.Add(conn.connectionId, conn);
+                        /// UNITYSTATION CODE ///
+                        // Use [] instead of Add(). TODO: explanation
+                        identity.observers[conn.connectionId] = conn;
                 }
             }
 
@@ -1553,7 +1568,10 @@ namespace Mirror
 
             // if there is no interest management system,
             // or if 'force shown' then add all connections
-            if (aoi == null || identity.visible == Visibility.ForceShown)
+            /// UNITYSTATION CODE ///
+            // Condition (OR) "identity.visible == Visibility.ForceShown" was removed so our custom scene check always works.
+            // Add it back if we switch over to spatial management.
+            if (aoi == null)
             {
                 RebuildObserversDefault(identity, initialize);
             }
@@ -1605,7 +1623,11 @@ namespace Mirror
                 // (which can happen if someone uses
                 //  GameObject.Destroy instead of
                 //  NetworkServer.Destroy)
-                if (identity != null)
+
+                /// UNITYSTATION CODE ///
+                // Null checks are slow: changed condition.
+                // if (identity != null)
+                if (identity.isDirty)
                 {
                     // get serialization for this entity viewed by this connection
                     // (if anything was serialized this time)
@@ -1624,7 +1646,9 @@ namespace Mirror
                 // always call Remove in OnObjectDestroy everywhere.
                 // if it does have null then someone used
                 // GameObject.Destroy instead of NetworkServer.Destroy.
-                else Debug.LogWarning($"Found 'null' entry in observing list for connectionId={connection.connectionId}. Please call NetworkServer.Destroy to destroy networked objects. Don't use GameObject.Destroy.");
+                /// UNITYSTATION CODE ///
+                // Comment out this warning (we now assume identity is not null as it is faster).
+                //else Debug.LogWarning($"Found 'null' entry in observing list for connectionId={connection.connectionId}. Please call NetworkServer.Destroy to destroy networked objects. Don't use GameObject.Destroy.");
             }
         }
 

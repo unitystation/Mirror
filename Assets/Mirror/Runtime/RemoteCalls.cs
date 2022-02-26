@@ -10,7 +10,9 @@ namespace Mirror.RemoteCalls
     // remote call function delegate
     public delegate void RemoteCallDelegate(NetworkBehaviour obj, NetworkReader reader, NetworkConnectionToClient senderConnection);
 
-    class Invoker
+    /// UNITYSTATION CODE ///
+    // Made public to allow access to custom fields.
+    public class Invoker
     {
         // GameObjects might have multiple components of TypeA.CommandA().
         // when invoking, we check if 'TypeA' is an instance of the type.
@@ -98,6 +100,11 @@ namespace Mirror.RemoteCalls
             invoker != null &&
             invoker.callType == remoteCallType;
 
+        /// UNITYSTATION CODE ///
+        // These two fields are used as checkpoints for the infinite loop tracker.
+        public static bool mirrorProcessingCMD;
+        public static Invoker mirrorLastInvoker;
+
         // InvokeCmd/Rpc Delegate can all use the same function here
         internal static bool Invoke(int functionHash, RemoteCallType remoteCallType, NetworkReader reader, NetworkBehaviour component, NetworkConnectionToClient senderConnection = null)
         {
@@ -108,7 +115,13 @@ namespace Mirror.RemoteCalls
                 invoker.componentType.IsInstanceOfType(component))
             {
                 // invoke function on this component
+                /// UNITYSTATION CODE ///
+                // Wrap the function invocation for the infinite loop tracker.
+                mirrorProcessingCMD = true;
+                mirrorLastInvoker = invoker;
                 invoker.function(component, reader, senderConnection);
+                mirrorProcessingCMD = false;
+
                 return true;
             }
             return false;

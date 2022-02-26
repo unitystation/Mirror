@@ -1,3 +1,9 @@
+/**
+ * /// UNITYSTATION CODE ///
+ * This is commented out as the networked prefab list is dynamically generated at build time.
+ */
+
+/*
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
@@ -106,3 +112,4 @@ namespace Mirror
         }
     }
 }
+*/
