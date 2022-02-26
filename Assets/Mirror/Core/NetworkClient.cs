@@ -1256,7 +1256,26 @@ namespace Mirror
                 //Debug.Log($"Client spawn handler instantiating [netId{message.netId} asset ID:{message.assetId} pos:{message.position} rotation:{message.rotation}]");
                 return obj.GetComponent<NetworkIdentity>();
             }
+            if (spawnHandlers.TryGetValue(message.assetId, out SpawnHandlerDelegate handler))
+            {
+                GameObject obj = handler(message);
+                /// UNITYSTATION CODE ///
+                // Update the localPosition for mapped objects as they may have been moved.
+                obj.transform.localPosition = message.position;
 
+                if (obj == null)
+                {
+                    Debug.LogError($"Spawn Handler returned null, Handler assetId '{message.assetId}'");
+                    return null;
+                }
+                NetworkIdentity identity = obj.GetComponent<NetworkIdentity>();
+                if (identity == null)
+                {
+                    Debug.LogError($"Object Spawned by handler did not have a NetworkIdentity, Handler assetId '{message.assetId}'");
+                    return null;
+                }
+                return identity;
+            }
             Debug.LogError($"Failed to spawn server object, did you forget to add it to the NetworkManager? assetId={message.assetId} netId={message.netId}");
             return null;
         }
@@ -1564,10 +1583,29 @@ namespace Mirror
                         }
                     }
                 }
-                // spawned list should have no null entries because we
-                // always call Remove in OnObjectDestroy everywhere.
-                // if it does have null then we missed something.
-                else Debug.LogWarning($"Found 'null' entry in owned list for client. This is unexpected behaviour.");
+                // default handling
+                else if (localObject.sceneId == 0)
+                {
+                    // don't call reset before destroy so that values are still set in OnDestroy
+                    GameObject.Destroy(localObject.gameObject);
+                }
+                // scene object.. disable it in scene instead of destroying
+                else
+                {
+                    /// UNITYSTATION CODE ///
+                    // Why? Because for some reason Mirror wants to treat seen objects as special.
+                    // It's better to just destroy the object so we don't get inconsistent behaviour
+                    // between something that spawned in and something that was put in the scene.
+                    GameObject.Destroy(localObject.gameObject);
+
+                    //localObject.gameObject.SetActive(false);
+                    //spawnableObjects[localObject.sceneId] = localObject;
+                    //// reset for scene objects
+                    //localObject.Reset();
+                }
+
+                // remove from dictionary no matter how it is unspawned
+                spawned.Remove(netId);
             }
         }
 

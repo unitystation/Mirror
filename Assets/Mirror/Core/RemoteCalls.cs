@@ -128,6 +128,11 @@ namespace Mirror.RemoteCalls
             invoker != null &&
             invoker.callType == remoteCallType;
 
+        /// UNITYSTATION CODE ///
+        // These two fields are used as checkpoints for the infinite loop tracker.
+        public static bool mirrorProcessingCMD;
+        public static Invoker mirrorLastInvoker;
+
         // InvokeCmd/Rpc Delegate can all use the same function here
         internal static bool Invoke(ushort functionHash, RemoteCallType remoteCallType, NetworkReader reader, NetworkBehaviour component, NetworkConnectionToClient senderConnection = null)
         {
@@ -143,6 +148,10 @@ namespace Mirror.RemoteCalls
                 mirrorProcessingCMD = true;
                 mirrorLastInvoker = invoker;
                 // invoke function on this component
+                /// UNITYSTATION CODE ///
+                // Wrap the function invocation for the infinite loop tracker.
+                mirrorProcessingCMD = true;
+                mirrorLastInvoker = invoker;
                 invoker.function(component, reader, senderConnection);
                 mirrorProcessingCMD = false;
 
