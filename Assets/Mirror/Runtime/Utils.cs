@@ -126,5 +126,25 @@ namespace Mirror
             }
             return true;
         }
+
+        /// <summary>
+        /// UNITYSTATION CODE ///
+        /// Gets the location of the gameobject in the scene hierarchy
+        /// by building a path from the object to the root.
+        /// </summary>
+        /// <param name="obj">The object to build a path for</param>
+        /// <returns>e.g. Grandparent/Parent/Object</returns>
+        public static string GetGameObjectPath(GameObject obj)
+        {
+            var sb = new System.Text.StringBuilder(obj.name);
+
+            while (obj.transform.parent != null)
+            {
+                obj = obj.transform.parent.gameObject;
+                sb.Insert(0, $"{obj.name}/");
+            }
+
+            return sb.ToString();
+        }
     }
 }

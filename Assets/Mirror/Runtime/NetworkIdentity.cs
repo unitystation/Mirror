@@ -42,6 +42,13 @@ namespace Mirror
     [HelpURL("https://mirror-networking.gitbook.io/docs/components/network-identity")]
     public sealed class NetworkIdentity : MonoBehaviour
     {
+        /// <summary>
+        /// UNITYSTATION CODE ///
+        /// TODO: an explanation on why we need this would be nice.
+        /// </summary>
+        [NonSerialized]
+        public bool isDirty;
+
         /// <summary>Returns true if running as a client and this object was spawned by a server.</summary>
         //
         // IMPORTANT:
@@ -222,7 +229,9 @@ namespace Mirror
                 // old not empty
                 if (!string.IsNullOrEmpty(oldAssetIdSrting))
                 {
-                    Debug.LogError($"Can not Set AssetId on NetworkIdentity '{name}' because it already had an assetId, current assetId '{oldAssetIdSrting}', attempted new assetId '{newAssetIdString}'");
+                    /// UNITYSTATION CODE ///
+                    // Would be nice to have the reason why it complains if it's set wrong.
+                    //Debug.LogError($"Can not Set AssetId on NetworkIdentity '{name}' because it already had an assetId, current assetId '{oldAssetIdString}', attempted new assetId '{newAssetIdString}'");
                     return;
                 }
 
@@ -313,7 +322,11 @@ namespace Mirror
 
             if (hasSpawned)
             {
-                Debug.LogError($"{name} has already spawned. Don't call Instantiate for NetworkIdentities that were in the scene since the beginning (aka scene objects).  Otherwise the client won't know which object to use for a SpawnSceneObject message.");
+                /// UNITYSTATION CODE ///
+                // Add more information to the log to help identify the object.
+                Debug.LogError($"{Utils.GetGameObjectPath(gameObject)} at position {transform.position} has already spawned. " +
+                        $"Don't call Instantiate for NetworkIdentities that were in the scene since the beginning (aka scene objects). " +
+                        $"Otherwise the client won't know which object to use for a SpawnSceneObject message.");
                 SpawnedFromInstantiate = true;
                 Destroy(gameObject);
             }
@@ -408,7 +421,10 @@ namespace Mirror
                 // => throw an exception to cancel the build and let the user
                 //    know how to fix it!
                 if (BuildPipeline.isBuildingPlayer)
-                    throw new InvalidOperationException("Scene " + gameObject.scene.path + " needs to be opened and resaved before building, because the scene object " + name + " has no valid sceneId yet.");
+                    /// UNITYSTATION CODE ///
+                    // Replaced with warning as it used to stop build.
+                    Debug.LogWarning($"Scene {gameObject.scene.path} needs to be opened and resaved before building, because the scene object {name} has no valid sceneId yet.");
+                    //throw new InvalidOperationException($"Scene {gameObject.scene.path} needs to be opened and resaved before building, because the scene object {name} has no valid sceneId yet.");
 
                 // if we generate the sceneId then we MUST be sure to set dirty
                 // in order to save the scene object properly. otherwise it
@@ -696,6 +712,14 @@ namespace Mirror
             }
 
             // Debug.Log("OnStartClient " + gameObject + " netId:" + netId);
+            /// UNITYSTATION CODE ///
+            // TODO: explanation
+            if (NetworkBehaviours == null)
+            {
+                Debug.LogError($"NetworkBehaviours is null on {Utils.GetGameObjectPath(gameObject)} at position {gameObject.transform.localPosition}.");
+                return;
+            }
+
             foreach (NetworkBehaviour comp in NetworkBehaviours)
             {
                 // an exception in OnStartClient should be caught, so that one
@@ -995,7 +1019,9 @@ namespace Mirror
         {
             if (NetworkBehaviours == null)
             {
-                Debug.LogError($"NetworkBehaviours array is null on {gameObject.name}!\n" +
+                /// UNITYSTATION CODE ///
+                // Add more information to the log to help identify the object.
+                Debug.LogError($"NetworkBehaviours array is null on {Utils.GetGameObjectPath(gameObject)} at position {gameObject.transform.position}!\n" +
                     $"Typically this can happen when a networked object is a child of a " +
                     $"non-networked parent that's disabled, preventing Awake on the networked object " +
                     $"from being invoked, where the NetworkBehaviours array is initialized.", gameObject);
@@ -1076,6 +1102,15 @@ namespace Mirror
             }
         }
 
+        /// <summary>
+        /// UNITYSTATION CODE ///
+        /// Manually add the player observer to this object.
+        /// </summary>
+        public void AddPlayerObserver(NetworkConnection conn)
+        {
+            AddObserver(conn);
+        }
+
         internal void AddObserver(NetworkConnection conn)
         {
             if (observers == null)
@@ -1089,6 +1124,14 @@ namespace Mirror
                 // if we try to add a connectionId that was already added, then
                 // we may have generated one that was already in use.
                 return;
+            }
+
+            /// UNITYSTATION CODE ///
+            // Log and return if null.
+            if (conn.identity == null)
+            {
+	            Debug.LogError($"The server tried to add a disconnected player to the list of {name} NetworkIdentity observers.");
+	            return;
             }
 
             // Debug.Log("Added observer " + conn.address + " added for " + gameObject);
@@ -1225,6 +1268,8 @@ namespace Mirror
             {
                 comp.ClearAllDirtyBits();
             }
+            /// UNITYSTATION CODE ///
+            isDirty = false;
         }
 
         // Clear only dirty component's dirty bits. ignores components which

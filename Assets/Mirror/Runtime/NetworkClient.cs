@@ -1054,6 +1054,10 @@ namespace Mirror
             if (spawnHandlers.TryGetValue(message.assetId, out SpawnHandlerDelegate handler))
             {
                 GameObject obj = handler(message);
+                /// UNITYSTATION CODE ///
+                // Update the localPosition for mapped objects as they may have been moved.
+                obj.transform.localPosition = message.position;
+
                 if (obj == null)
                 {
                     Debug.LogError($"Spawn Handler returned null, Handler assetId '{message.assetId}'");
@@ -1293,10 +1297,18 @@ namespace Mirror
                 // scene object.. disable it in scene instead of destroying
                 else
                 {
+                    /// UNITYSTATION CODE ///
+                    // Why? Because for some reason Mirror wants to treat seen objects as special.
+                    // It's better to just destroy the object so we don't get inconsistent behaviour
+                    // between something that spawned in and something that was put in the scene.
+                    GameObject.Destroy(localObject.gameObject);
+
+                    /*
                     localObject.gameObject.SetActive(false);
                     spawnableObjects[localObject.sceneId] = localObject;
                     // reset for scene objects
                     localObject.Reset();
+                    */
                 }
 
                 // remove from dictionary no matter how it is unspawned

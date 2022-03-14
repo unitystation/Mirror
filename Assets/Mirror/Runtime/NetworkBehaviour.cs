@@ -470,6 +470,13 @@ namespace Mirror
         // these are masks, not bit numbers, ie. 0x004 not 2
         public void SetDirtyBit(ulong dirtyBit)
         {
+            /// UNITYSTATION CODE ///
+            // Set our custom isDirty field true.
+            if (netIdentity != null)
+            {
+                netIdentity.isDirty = true;
+            }
+
             syncVarDirtyBits |= dirtyBit;
         }
 
@@ -509,6 +516,10 @@ namespace Mirror
         // true if syncInterval elapsed and any SyncVar or SyncObject is dirty
         public bool IsDirty()
         {
+            /// UNITYSTATION CODE ///
+            // It is presumed to be dirty already since the addition of isDirty on the NetworkIdentity component.
+            return true;
+
             if (Time.time - lastSyncTime >= syncInterval)
             {
                 return syncVarDirtyBits != 0L || AnySyncObjectDirty();
