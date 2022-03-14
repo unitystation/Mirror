@@ -1958,8 +1958,33 @@ namespace Mirror
                 }
                 throw;
             }
+            //CUSTOM UNITYSTATION CODE// Cashs Time.frameCount and Parallel loop instead of for loop
+            FrameCountCash = Time.frameCount;
+            ApplicationIsPlayingCash = Application.isPlaying;
+            Parallel.ForEach(connectionsCopy, connection => SubConnectionBroadcast(connection));
 
         }
+
+        //CUSTOM UNITYSTATION CODE// Added part of Broadcast Logic
+        public static void SubConnectionBroadcast(NetworkConnectionToClient connection)
+        {
+            // check for inactivity. disconnects if necessary.
+            if (DisconnectIfInactive(connection))
+            {
+                return;
+            }
+
+            // has this connection joined the world yet?
+            // for each READY connection:
+            //   pull in UpdateVarsMessage for each entity it observes
+            if (connection.isReady)
+            {
+                // broadcast world state to this connection
+                BroadcastToConnection(connection);
+            }
+            connection.Update();
+        }
+
 
         // update //////////////////////////////////////////////////////////////
         // NetworkEarlyUpdate called before any Update/FixedUpdate

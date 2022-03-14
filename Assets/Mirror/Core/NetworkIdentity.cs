@@ -1508,6 +1508,312 @@ namespace Mirror
             }
         }
 
+        // vis2k: readstring bug prevention: https://github.com/vis2k/Mirror/issues/2617
+        // -> OnSerialize writes length,componentData,length,componentData,...
+        // -> OnDeserialize carefully extracts each data, then deserializes each component with separate readers
+        //    -> it will be impossible to read too many or too few bytes in OnDeserialize
+        //    -> we can properly track down errors
+        bool OnSerializeSafely(NetworkBehaviour comp, NetworkWriter writer, bool initialState)
+        {
+            // write placeholder length bytes
+            // (jumping back later is WAY faster than allocating a temporary
+            //  writer for the payload, then writing payload.size, payload)
+            int headerPosition = writer.Position;
+            // no varint because we don't know the final size yet
+            writer.WriteInt(0);
+            int contentPosition = writer.Position;
+
+            // write payload
+            bool result = false;
+            try
+            {
+                result = comp.OnSerialize(writer, initialState);
+            }
+            catch (Exception e)
+            {
+                // show a detailed error and let the user know what went wrong
+                Debug.LogError($"OnSerialize failed for: object={name} component={comp.GetType()} sceneId={sceneId:X}\n\n{e}");
+            }
+            int endPosition = writer.Position;
+
+            // fill in length now
+            writer.Position = headerPosition;
+            writer.WriteInt(endPosition - contentPosition);
+            writer.Position = endPosition;
+
+            //Debug.Log($"OnSerializeSafely written for object {comp.name} component:{comp.GetType()} sceneId:{sceneId:X} header:{headerPosition} content:{contentPosition} end:{endPosition} contentSize:{endPosition - contentPosition}");
+
+            return result;
+        }
+
+        // serialize all components using dirtyComponentsMask
+        // check ownerWritten/observersWritten to know if anything was written
+        // We pass dirtyComponentsMask into this function so that we can check
+        // if any Components are dirty before creating writers
+        internal void OnSerializeAllSafely(bool initialState, NetworkWriter ownerWriter, NetworkWriter observersWriter)
+        {
+            // check if components are in byte.MaxRange just to be 100% sure
+            // that we avoid overflows
+            NetworkBehaviour[] components = NetworkBehaviours;
+            if (components.Length > byte.MaxValue)
+                throw new IndexOutOfRangeException($"{name} has more than {byte.MaxValue} components. This is not supported.");
+
+            // serialize all components
+            for (int i = 0; i < components.Length; ++i)
+            {
+                // is this component dirty?
+                // -> always serialize if initialState so all components are included in spawn packet
+                // -> note: IsDirty() is false if the component isn't dirty or sendInterval isn't elapsed yet
+                NetworkBehaviour comp = components[i];
+                if (initialState || comp.IsDirty())
+                {
+                    //Debug.Log($"OnSerializeAllSafely: {name} -> {comp.GetType()} initial:{ initialState}");
+
+                    // remember start position in case we need to copy it into
+                    // observers writer too
+                    int startPosition = ownerWriter.Position;
+
+                    // write index as byte [0..255]
+                    ownerWriter.WriteByte((byte)i);
+
+                    // serialize into ownerWriter first
+                    // (owner always gets everything!)
+                    OnSerializeSafely(comp, ownerWriter, initialState);
+
+                    // copy into observersWriter too if SyncMode.Observers
+                    // -> we copy instead of calling OnSerialize again because
+                    //    we don't know what magic the user does in OnSerialize.
+                    // -> it's not guaranteed that calling it twice gets the
+                    //    same result
+                    // -> it's not guaranteed that calling it twice doesn't mess
+                    //    with the user's OnSerialize timing code etc.
+                    // => so we just copy the result without touching
+                    //    OnSerialize again
+                    if (comp.syncMode == SyncMode.Observers)
+                    {
+                        ArraySegment<byte> segment = ownerWriter.ToArraySegment();
+                        int length = ownerWriter.Position - startPosition;
+                        observersWriter.WriteBytes(segment.Array, startPosition, length);
+                    }
+                }
+            }
+        }
+
+        // get cached serialization for this tick (or serialize if none yet)
+        // IMPORTANT: int tick avoids floating point inaccuracy over days/weeks
+        internal NetworkIdentitySerialization GetSerializationAtTick(int tick)
+        {
+            // only rebuild serialization once per tick. reuse otherwise.
+            // except for tests, where Time.frameCount never increases.
+            // so during tests, we always rebuild.
+            // (otherwise [SyncVar] changes would never be serialized in tests)
+            //
+            // NOTE: != instead of < because int.max+1 overflows at some point.
+            //CUSTOM UNITYSTATION CODE// Look because it needs to be generated, By one Thread
+            lock (lastSerialization.observersWriter)
+            {
+                if (lastSerialization.tick != tick || !NetworkServer.ApplicationIsPlayingCash)
+                {
+                    // reset
+                    lastSerialization.ownerWriter.Position = 0;
+                    lastSerialization.observersWriter.Position = 0;
+
+                    // serialize
+                    OnSerializeAllSafely(false,
+                        lastSerialization.ownerWriter,
+                        lastSerialization.observersWriter);
+
+                    // clear dirty bits for the components that we serialized.
+                    // previously we did this in NetworkServer.BroadcastToConnection
+                    // for every connection, for every entity.
+                    // but we only serialize each entity once, right here in this
+                    // 'lastSerialization.tick != tick' scope.
+                    // so only do it once.
+                    //
+                    // NOTE: not in OnSerializeAllSafely as that should only do one
+                    //       thing: serialize data.
+                    //
+                    //
+                    // NOTE: DO NOT clear ALL component's dirty bits, because
+                    //       components can have different syncIntervals and we
+                    //       don't want to reset dirty bits for the ones that were
+                    //       not synced yet. ////CUSTOM UNITYSTATION CODE// We don't use it so we can ignore this
+                    //
+                    // NOTE: this used to be very important to avoid ever growing
+                    //       SyncList changes if they had no observers, but we've
+                    //       added SyncObject.isRecording since.
+                    //CUSTOM UNITYSTATION CODE// was //ClearDirtyComponentsDirtyBits(); now, so is dirty can be set to false
+                    ClearAllComponentsDirtyBits();
+
+
+                    // set tick
+                    lastSerialization.tick = tick;
+                    //Debug.Log($"{name} (netId={netId}) serialized for tick={tickTimeStamp}");
+                }
+            }
+
+            // return it
+            return lastSerialization;
+        }
+
+        void OnDeserializeSafely(NetworkBehaviour comp, NetworkReader reader, bool initialState)
+        {
+            // read header as 4 bytes and calculate this chunk's start+end
+            int contentSize = reader.ReadInt();
+            int chunkStart = reader.Position;
+            int chunkEnd = reader.Position + contentSize;
+
+            // call OnDeserialize and wrap it in a try-catch block so there's no
+            // way to mess up another component's deserialization
+            try
+            {
+                //Debug.Log($"OnDeserializeSafely: {comp.name} component:{comp.GetType()} sceneId:{sceneId:X} length:{contentSize}");
+                comp.OnDeserialize(reader, initialState);
+            }
+            catch (Exception e)
+            {
+                // show a detailed error and let the user know what went wrong
+                Debug.LogError($"OnDeserialize failed Exception={e.GetType()} (see below) object={name} component={comp.GetType()} sceneId={sceneId:X} length={contentSize}. Possible Reasons:\n" +
+                               $"  * Do {comp.GetType()}'s OnSerialize and OnDeserialize calls write the same amount of data({contentSize} bytes)? \n" +
+                               $"  * Was there an exception in {comp.GetType()}'s OnSerialize/OnDeserialize code?\n" +
+                               $"  * Are the server and client the exact same project?\n" +
+                               $"  * Maybe this OnDeserialize call was meant for another GameObject? The sceneIds can easily get out of sync if the Hierarchy was modified only in the client OR the server. Try rebuilding both.\n\n" +
+                               $"Exception {e}");
+            }
+
+            // now the reader should be EXACTLY at 'before + size'.
+            // otherwise the component read too much / too less data.
+            if (reader.Position != chunkEnd)
+            {
+                // warn the user
+                int bytesRead = reader.Position - chunkStart;
+                Debug.LogWarning($"OnDeserialize was expected to read {contentSize} instead of {bytesRead} bytes for object:{name} component={comp.GetType()} sceneId={sceneId:X}. Make sure that OnSerialize and OnDeserialize write/read the same amount of data in all cases.");
+
+                // fix the position, so the following components don't all fail
+                reader.Position = chunkEnd;
+            }
+        }
+
+        internal void OnDeserializeAllSafely(NetworkReader reader, bool initialState)
+        {
+            if (NetworkBehaviours == null)
+            {
+                /// UNITYSTATION CODE ///
+                // Add more details to the log to identify the object.
+                Debug.LogError($"NetworkBehaviours array is null on {Utils.GetGameObjectPath(gameObject)} at position {gameObject.transform.position}!\n" +
+                    $"Typically this can happen when a networked object is a child of a " +
+                    $"non-networked parent that's disabled, preventing Awake on the networked object " +
+                    $"from being invoked, where the NetworkBehaviours array is initialized.", gameObject);
+                return;
+            }
+
+            // deserialize all components that were received
+            NetworkBehaviour[] components = NetworkBehaviours;
+            while (reader.Remaining > 0)
+            {
+                // read & check index [0..255]
+                byte index = reader.ReadByte();
+                if (index < components.Length)
+                {
+                    // deserialize this component
+                    OnDeserializeSafely(components[index], reader, initialState);
+                }
+            }
+        }
+
+        // Helper function to handle Command/Rpc
+        internal void HandleRemoteCall(int componentIndex, int functionHash, RemoteCallType remoteCallType, NetworkReader reader, NetworkConnectionToClient senderConnection = null)
+        {
+            // check if unity object has been destroyed
+            if (this == null)
+            {
+                Debug.LogWarning($"{remoteCallType} [{functionHash}] received for deleted object [netId={netId}]");
+                return;
+            }
+
+            // find the right component to invoke the function on
+            if (componentIndex < 0 || componentIndex >= NetworkBehaviours.Length)
+            {
+                Debug.LogWarning($"Component [{componentIndex}] not found for [netId={netId}]");
+                return;
+            }
+
+            NetworkBehaviour invokeComponent = NetworkBehaviours[componentIndex];
+            if (!RemoteProcedureCalls.Invoke(functionHash, remoteCallType, reader, invokeComponent, senderConnection))
+            {
+                Debug.LogError($"Found no receiver for incoming {remoteCallType} [{functionHash}] on {gameObject.name}, the server and client should have the same NetworkBehaviour instances [netId={netId}].");
+            }
+        }
+
+        /// <summary>
+        /// CUSTOM UNITYSTATION CODE ///
+        /// Manually add the player observer to this object.
+        /// </summary>
+        public void AddPlayerObserver(NetworkConnectionToClient conn)
+        {
+            AddObserver(conn);
+        }
+
+        internal void AddObserver(NetworkConnectionToClient conn)
+        {
+            if (observers == null)
+            {
+                Debug.LogError($"AddObserver for {gameObject} observer list is null");
+                return;
+            }
+
+            if (observers.ContainsKey(conn.connectionId))
+            {
+                // if we try to add a connectionId that was already added, then
+                // we may have generated one that was already in use.
+                return;
+            }
+
+            /// UNITYSTATION CODE ///
+            // TODO: explanation
+            if (conn.identity == null)
+            {
+                Debug.LogError($"The server tried to add a disconnected player to the list of " +
+                        $"{Utils.GetGameObjectPath(gameObject)} NetworkIdentity observers");
+                return;
+            }
+
+            // Debug.Log($"Added observer: {conn.address} added for {gameObject}");
+
+            // if we previously had no observers, then clear all dirty bits once.
+            // a monster's health may have changed while it had no observers.
+            // but that change (= the dirty bits) don't matter as soon as the
+            // first observer comes.
+            // -> first observer gets full spawn packet
+            // -> afterwards it gets delta packet
+            //    => if we don't clear previous dirty bits, observer would get
+            //       the health change because the bit was still set.
+            //    => ultimately this happens because spawn doesn't reset dirty
+            //       bits
+            //    => which happens because spawn happens separately, instead of
+            //       in Broadcast() (which will be changed in the future)
+            //
+            // NOTE that NetworkServer.Broadcast previously cleared dirty bits
+            //      for ALL SPAWNED that don't have observers. that was super
+            //      expensive. doing it when adding the first observer has the
+            //      same result, without the O(N) iteration in Broadcast().
+            //
+            // TODO remove this after moving spawning into Broadcast()!
+            if (observers.Count == 0)
+            {
+                ClearAllComponentsDirtyBits();
+            }
+
+            observers[conn.connectionId] = conn;
+            conn.AddToObserving(this);
+        }
+
+        // this is used when a connection is destroyed, since the "observers" property is read-only
+        internal void RemoveObserver(NetworkConnection conn)
+        {
+            observers?.Remove(conn.connectionId);
+        }
+
         // Called when NetworkIdentity is destroyed
         internal void ClearObservers()
         {
