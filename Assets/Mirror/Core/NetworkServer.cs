@@ -1980,11 +1980,10 @@ namespace Mirror
             connectionsCopy.Clear();
             connections.Values.CopyTo(connectionsCopy);
 
+            //CUSTOM UNITYSTATION CODE// Cashs Time.frameCount and Parallel loop instead of for loop
             FrameCountCash = Time.frameCount;
             ApplicationIsPlayingCash = Application.isPlaying;
-            //CUSTOM UNITYSTATION CODE// Cashs Time.frameCount and Parallel loop instead of for loop
-            Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
-
+            Parallel.ForEach(connectionsCopy, connection => SubConnectionBroadcast(connection));
 
             // TODO this is way too slow because we iterate ALL spawned :/
             // TODO this is way too complicated :/
