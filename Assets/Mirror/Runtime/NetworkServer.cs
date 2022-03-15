@@ -1658,6 +1658,10 @@ namespace Mirror
         internal static readonly List<NetworkConnectionToClient> connectionsCopy =
             new List<NetworkConnectionToClient>();
 
+        //CUSTOM UNITYSTATION CODE// thread Safe read Time.frameCount
+        public static int FrameCountCash;
+        public static bool ApplicationIsPlayingCash;
+
         static void Broadcast()
         {
             // copy all connections into a helper collection so that
@@ -1671,21 +1675,10 @@ namespace Mirror
             connectionsCopy.Clear();
             connections.Values.CopyTo(connectionsCopy);
 
-            // go through all connections
-            foreach (NetworkConnectionToClient connection in connectionsCopy)
-            {
-                // has this connection joined the world yet?
-                // for each READY connection:
-                //   pull in UpdateVarsMessage for each entity it observes
-                if (connection.isReady)
-                {
-                    // broadcast world state to this connection
-                    BroadcastToConnection(connection);
-                }
-
-                // update connection to flush out batched messages
-                connection.Update();
-            }
+            //CUSTOM UNITYSTATION CODE// Cashs Time.frameCount and Parallel loop instead of for loop
+            FrameCountCash = Time.frameCount;
+            ApplicationIsPlayingCash = Application.isPlaying;
+            Parallel.ForEach(connectionsCopy, connection => SubConnectionBroadcast(connection));
 
             // TODO this is way too slow because we iterate ALL spawned :/
             // TODO this is way too complicated :/
@@ -1711,6 +1704,27 @@ namespace Mirror
             // same result, but no more O(N) loop in here!
             // TODO remove this comment after moving spawning into Broadcast()!
         }
+
+        //CUSTOM UNITYSTATION CODE// Added part of Broadcast Logic
+        public static void SubConnectionBroadcast(NetworkConnectionToClient connection)
+        {
+            // check for inactivity. disconnects if necessary.
+            if (DisconnectIfInactive(connection))
+            {
+                return;
+            }
+
+            // has this connection joined the world yet?
+            // for each READY connection:
+            //   pull in UpdateVarsMessage for each entity it observes
+            if (connection.isReady)
+            {
+                // broadcast world state to this connection
+                BroadcastToConnection(connection);
+            }
+            connection.Update();
+        }
+
 
         // update //////////////////////////////////////////////////////////////
         // NetworkEarlyUpdate called before any Update/FixedUpdate

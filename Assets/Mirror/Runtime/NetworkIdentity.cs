@@ -981,41 +981,47 @@ namespace Mirror
             // (otherwise [SyncVar] changes would never be serialized in tests)
             //
             // NOTE: != instead of < because int.max+1 overflows at some point.
-            if (lastSerialization.tick != tick || !Application.isPlaying)
+            //CUSTOM UNITYSTATION CODE// Look because it needs to be generated, By one Thread
+            lock (lastSerialization.observersWriter)
             {
-                // reset
-                lastSerialization.ownerWriter.Position = 0;
-                lastSerialization.observersWriter.Position = 0;
+                if (lastSerialization.tick != tick || !NetworkServer.ApplicationIsPlayingCash)
+                {
+                    // reset
+                    lastSerialization.ownerWriter.Position = 0;
+                    lastSerialization.observersWriter.Position = 0;
 
-                // serialize
-                OnSerializeAllSafely(false,
-                                     lastSerialization.ownerWriter,
-                                     lastSerialization.observersWriter);
+                    // serialize
+                    OnSerializeAllSafely(false,
+                        lastSerialization.ownerWriter,
+                        lastSerialization.observersWriter);
 
-                // clear dirty bits for the components that we serialized.
-                // previously we did this in NetworkServer.BroadcastToConnection
-                // for every connection, for every entity.
-                // but we only serialize each entity once, right here in this
-                // 'lastSerialization.tick != tick' scope.
-                // so only do it once.
-                //
-                // NOTE: not in OnSerializeAllSafely as that should only do one
-                //       thing: serialize data.
-                //
-                //
-                // NOTE: DO NOT clear ALL component's dirty bits, because
-                //       components can have different syncIntervals and we
-                //       don't want to reset dirty bits for the ones that were
-                //       not synced yet.
-                //
-                // NOTE: this used to be very important to avoid ever growing
-                //       SyncList changes if they had no observers, but we've
-                //       added SyncObject.isRecording since.
-                ClearDirtyComponentsDirtyBits();
+                    // clear dirty bits for the components that we serialized.
+                    // previously we did this in NetworkServer.BroadcastToConnection
+                    // for every connection, for every entity.
+                    // but we only serialize each entity once, right here in this
+                    // 'lastSerialization.tick != tick' scope.
+                    // so only do it once.
+                    //
+                    // NOTE: not in OnSerializeAllSafely as that should only do one
+                    //       thing: serialize data.
+                    //
+                    //
+                    // NOTE: DO NOT clear ALL component's dirty bits, because
+                    //       components can have different syncIntervals and we
+                    //       don't want to reset dirty bits for the ones that were
+                    //       not synced yet. ////CUSTOM UNITYSTATION CODE// We don't use it so we can ignore this
+                    //
+                    // NOTE: this used to be very important to avoid ever growing
+                    //       SyncList changes if they had no observers, but we've
+                    //       added SyncObject.isRecording since.
+                    //CUSTOM UNITYSTATION CODE// was //ClearDirtyComponentsDirtyBits(); now, so is dirty can be set to false
+                    ClearAllComponentsDirtyBits();
 
-                // set tick
-                lastSerialization.tick = tick;
-                //Debug.Log($"{name} (netId={netId}) serialized for tick={tickTimeStamp}");
+
+                    // set tick
+                    lastSerialization.tick = tick;
+                    //Debug.Log($"{name} (netId={netId}) serialized for tick={tickTimeStamp}");
+                }
             }
 
             // return it
