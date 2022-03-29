@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Mirror.RemoteCalls;
 using UnityEngine;
 
@@ -1588,7 +1589,7 @@ namespace Mirror
         {
             // get serialization for this entity (cached)
             // IMPORTANT: int tick avoids floating point inaccuracy over days/weeks
-            NetworkIdentitySerialization serialization = identity.GetSerializationAtTick(Time.frameCount);
+            NetworkIdentitySerialization serialization = identity.GetSerializationAtTick(FrameCountCash);
 
             // is this entity owned by this connection?
             bool owned = identity.connectionToClient == connection;
@@ -1708,12 +1709,6 @@ namespace Mirror
         //CUSTOM UNITYSTATION CODE// Added part of Broadcast Logic
         public static void SubConnectionBroadcast(NetworkConnectionToClient connection)
         {
-            // check for inactivity. disconnects if necessary.
-            if (DisconnectIfInactive(connection))
-            {
-                return;
-            }
-
             // has this connection joined the world yet?
             // for each READY connection:
             //   pull in UpdateVarsMessage for each entity it observes
