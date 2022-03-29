@@ -1968,12 +1968,6 @@ namespace Mirror
         //CUSTOM UNITYSTATION CODE// Added part of Broadcast Logic
         public static void SubConnectionBroadcast(NetworkConnectionToClient connection)
         {
-            // check for inactivity. disconnects if necessary.
-            if (DisconnectIfInactive(connection))
-            {
-                return;
-            }
-
             // has this connection joined the world yet?
             // for each READY connection:
             //   pull in UpdateVarsMessage for each entity it observes
