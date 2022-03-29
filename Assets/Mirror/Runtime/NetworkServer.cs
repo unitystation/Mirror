@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Mirror.RemoteCalls;
 using UnityEngine;
 
@@ -1451,7 +1452,7 @@ namespace Mirror
         {
             // get serialization for this entity (cached)
             // IMPORTANT: int tick avoids floating point inaccuracy over days/weeks
-            NetworkIdentitySerialization serialization = identity.GetSerializationAtTick(Time.frameCount);
+            NetworkIdentitySerialization serialization = identity.GetSerializationAtTick(FrameCountCash);
 
             // is this entity owned by this connection?
             bool owned = identity.connectionToClient == connection;
@@ -1583,6 +1584,11 @@ namespace Mirror
         static readonly List<NetworkConnectionToClient> connectionsCopy =
             new List<NetworkConnectionToClient>();
 
+        //CUSTOM UNITYSTATION CODE// thread Safe read Time.frameCount
+        public static int FrameCountCash;
+
+
+
         static void Broadcast()
         {
             // copy all connections into a helper collection so that
@@ -1596,25 +1602,10 @@ namespace Mirror
             connectionsCopy.Clear();
             connections.Values.CopyTo(connectionsCopy);
 
-            // go through all connections
-            foreach (NetworkConnectionToClient connection in connectionsCopy)
-            {
-                // check for inactivity. disconnects if necessary.
-                if (DisconnectIfInactive(connection))
-                    continue;
+            //CUSTOM UNITYSTATION CODE// Cashs Time.frameCount and Parallel loop instead of for loop
+            FrameCountCash = Time.frameCount;
 
-                // has this connection joined the world yet?
-                // for each READY connection:
-                //   pull in UpdateVarsMessage for each entity it observes
-                if (connection.isReady)
-                {
-                    // broadcast world state to this connection
-                    BroadcastToConnection(connection);
-                }
-
-                // update connection to flush out batched messages
-                connection.Update();
-            }
+            Parallel.ForEach(connectionsCopy, connection => SubConnectionBroadcast(connection));
 
             // TODO we already clear the serialized component's dirty bits above
             //      might as well clear everything???
@@ -1628,6 +1619,28 @@ namespace Mirror
             //
             ClearSpawnedDirtyBits();
         }
+
+        //CUSTOM UNITYSTATION CODE// Added part of Broadcast Logic
+        public static void SubConnectionBroadcast(NetworkConnectionToClient connection)
+        {
+            // check for inactivity. disconnects if necessary.
+            if (DisconnectIfInactive(connection))
+            {
+                return;
+            }
+
+            // has this connection joined the world yet?
+            // for each READY connection:
+            //   pull in UpdateVarsMessage for each entity it observes
+            if (connection.isReady)
+            {
+                // broadcast world state to this connection
+                BroadcastToConnection(connection);
+            }
+            connection.Update();
+        }
+
+
 
         // update //////////////////////////////////////////////////////////////
         // NetworkEarlyUpdate called before any Update/FixedUpdate
