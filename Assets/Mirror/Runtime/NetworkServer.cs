@@ -1452,7 +1452,7 @@ namespace Mirror
         {
             // get serialization for this entity (cached)
             // IMPORTANT: int tick avoids floating point inaccuracy over days/weeks
-            NetworkIdentitySerialization serialization = identity.GetSerializationAtTick(Time.frameCount);
+            NetworkIdentitySerialization serialization = identity.GetSerializationAtTick(FrameCountCash);
 
             // is this entity owned by this connection?
             bool owned = identity.connectionToClient == connection;
@@ -1586,7 +1586,6 @@ namespace Mirror
 
         //CUSTOM UNITYSTATION CODE// thread Safe read Time.frameCount
         public static int FrameCountCash;
-        public static bool ApplicationIsPlayingCash;
 
 
 
@@ -1605,7 +1604,6 @@ namespace Mirror
 
             //CUSTOM UNITYSTATION CODE// Cashs Time.frameCount and Parallel loop instead of for loop
             FrameCountCash = Time.frameCount;
-            ApplicationIsPlayingCash = Application.isPlaying;
 
             Parallel.ForEach(connectionsCopy, connection => SubConnectionBroadcast(connection));
 
