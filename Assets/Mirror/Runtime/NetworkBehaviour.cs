@@ -160,7 +160,7 @@ namespace Mirror
         // be called manually as well.
         public void ClearAllDirtyBits()
         {
-            lastSyncTime = NetworkTime.localTime;
+            lastSyncTime = NetworkServer.CashedLocalTime;
             syncVarDirtyBits = 0L;
             syncObjectDirtyBits = 0L;
 
