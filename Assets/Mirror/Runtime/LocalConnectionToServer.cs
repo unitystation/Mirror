@@ -74,7 +74,7 @@ namespace Mirror
                 using (PooledNetworkWriter batchWriter = NetworkWriterPool.GetWriter())
                 {
                     // make a batch with our local time (double precision)
-                    if (batcher.MakeNextBatch(batchWriter, NetworkTime.localTime))
+                    if (batcher.MakeNextBatch(batchWriter, NetworkServer.CashedLocalTime))
                     {
                         NetworkClient.OnTransportData(batchWriter.ToArraySegment(), Channels.Reliable);
                     }
