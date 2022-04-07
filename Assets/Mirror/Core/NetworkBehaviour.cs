@@ -216,8 +216,7 @@ namespace Mirror
         // be called manually as well.
         public void ClearAllDirtyBits()
         {
-            /// UNITYSTATION CODE /// \/ Saves a tiny bit of performance
-            //lastSyncTime = NetworkTime.localTime;
+            lastSyncTime = NetworkServer.CashedLocalTime;
             syncVarDirtyBits = 0L;
             syncObjectDirtyBits = 0L;
 
