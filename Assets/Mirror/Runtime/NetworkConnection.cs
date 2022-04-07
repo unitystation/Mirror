@@ -168,7 +168,7 @@ namespace Mirror
         protected abstract void SendToTransport(ArraySegment<byte> segment, int channelId = Channels.Reliable);
 
         // flush batched messages at the end of every Update.
-        internal virtual void Update()
+        internal virtual void Update(bool mainThread = true) //CUSTOM UNITYSTATION CODE// So we can tell if it's on main thread or not
         {
             // go through batches for all channels
             foreach (KeyValuePair<int, Batcher> kvp in batches)
@@ -178,8 +178,18 @@ namespace Mirror
                 Batcher batcher = kvp.Value;
                 using (PooledNetworkWriter writer = NetworkWriterPool.GetWriter())
                 {
+                    double LocalTime = 0; //CUSTOM UNITYSTATION CODE// So we can access if it's on main thread or not
+                    if (mainThread)
+                    {
+                        LocalTime = NetworkTime.localTime;
+                    }
+                    else
+                    {
+                        LocalTime = NetworkServer.CashedLocalTime;
+                    }
+
                     // make a batch with our local time (double precision)
-                    while (batcher.MakeNextBatch(writer, NetworkServer.CashedLocalTime))
+                    while (batcher.MakeNextBatch(writer, LocalTime))
                     {
                         // validate packet before handing the batch to the
                         // transport. this guarantees that we always stay

@@ -48,9 +48,9 @@ namespace Mirror
             }
         }
 
-        internal override void Update()
+        internal override void Update(bool mainThread = true) //CUSTOM UNITYSTATION CODE// So we can tell if it's on main thread or not
         {
-            base.Update();
+            base.Update(mainThread);
 
             // should we still process a connected event?
             if (connectedEventPending)
@@ -73,8 +73,17 @@ namespace Mirror
 
                 using (PooledNetworkWriter batchWriter = NetworkWriterPool.GetWriter())
                 {
+                    double LocalTime = 0; //CUSTOM UNITYSTATION CODE// So we can access if it's on main thread or not
+                    if (mainThread)
+                    {
+                        LocalTime = NetworkTime.localTime;
+                    }
+                    else
+                    {
+                        LocalTime = NetworkServer.CashedLocalTime;
+                    }
                     // make a batch with our local time (double precision)
-                    if (batcher.MakeNextBatch(batchWriter, NetworkServer.CashedLocalTime))
+                    if (batcher.MakeNextBatch(batchWriter, LocalTime))
                     {
                         NetworkClient.OnTransportData(batchWriter.ToArraySegment(), Channels.Reliable);
                     }
