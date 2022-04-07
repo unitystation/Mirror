@@ -1978,7 +1978,7 @@ namespace Mirror
                 // broadcast world state to this connection
                 BroadcastToConnection(connection);
             }
-            connection.Update();
+            connection.Update(false);
         }
 
 
