@@ -1628,7 +1628,7 @@ namespace Mirror
                 /// UNITYSTATION CODE ///
                 // Null checks are slow: changed condition.
                 // if (identity != null)
-                if (identity.isDirty)
+                if (identity.isDirty || identity.lastSerialization.tick == FrameCountCash)  /// UNITYSTATION CODE /// If it's the same frame then it's been serialised already and is dirty stil
                 {
                     // get serialization for this entity viewed by this connection
                     // (if anything was serialized this time)
@@ -1683,11 +1683,6 @@ namespace Mirror
 
             Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
 
-            foreach (var connection in connectionsCopy)
-            {
-                connection.Update();
-            }
-
             // TODO this is way too slow because we iterate ALL spawned :/
             // TODO this is way too complicated :/
             // to understand what this tries to prevent, consider this example:
@@ -1713,6 +1708,7 @@ namespace Mirror
             // TODO remove this comment after moving spawning into Broadcast()!
         }
 
+
         //CUSTOM UNITYSTATION CODE// Added part of Broadcast Logic
         public static void SubConnectionBroadcast(NetworkConnectionToClient connection)
         {
@@ -1724,6 +1720,7 @@ namespace Mirror
                 // broadcast world state to this connection
                 BroadcastToConnection(connection);
             }
+            connection.Update(false);
 
         }
 
