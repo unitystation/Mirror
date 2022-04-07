@@ -241,7 +241,7 @@ namespace Mirror
         // (timestamp is the same while inside Update)
         // => this way we don't need to pool thousands of writers either.
         // => way easier to store them per object
-        NetworkIdentitySerialization lastSerialization = new NetworkIdentitySerialization
+        public NetworkIdentitySerialization lastSerialization = new NetworkIdentitySerialization
         {
             ownerWriter = new NetworkWriter(),
             observersWriter = new NetworkWriter()
@@ -1612,7 +1612,7 @@ namespace Mirror
             //CUSTOM UNITYSTATION CODE// Look because it needs to be generated, By one Thread
             lock (lastSerialization.observersWriter)
             {
-                if (lastSerialization.tick != tick || !NetworkServer.ApplicationIsPlayingCash)
+                if (lastSerialization.tick != tick || NetworkServer.ApplicationIsPlayingCash ==false)
                 {
                     // reset
                     lastSerialization.ownerWriter.Position = 0;

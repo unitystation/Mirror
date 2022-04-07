@@ -1967,6 +1967,7 @@ namespace Mirror
 
         }
 
+
         //CUSTOM UNITYSTATION CODE// Added part of Broadcast Logic
         public static void SubConnectionBroadcast(NetworkConnectionToClient connection)
         {
@@ -1978,6 +1979,7 @@ namespace Mirror
                 // broadcast world state to this connection
                 BroadcastToConnection(connection);
             }
+            connection.Update(false);
 
         }
 
