@@ -1966,7 +1966,7 @@ namespace Mirror
         //CUSTOM UNITYSTATION CODE// thread Safe read Time.frameCount
         public static int FrameCountCash;
         public static bool ApplicationIsPlayingCash;
-
+        public static double CashedLocalTime;
         static void Broadcast()
         {
             // copy all connections into a helper collection so that
@@ -1983,7 +1983,9 @@ namespace Mirror
             //CUSTOM UNITYSTATION CODE// Cashs Time.frameCount and Parallel loop instead of for loop
             FrameCountCash = Time.frameCount;
             ApplicationIsPlayingCash = Application.isPlaying;
-            Parallel.ForEach(connectionsCopy, connection => SubConnectionBroadcast(connection));
+            CashedLocalTime = NetworkTime.localTime;
+
+            Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
 
             // TODO this is way too slow because we iterate ALL spawned :/
             // TODO this is way too complicated :/
