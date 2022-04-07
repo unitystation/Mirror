@@ -1928,7 +1928,7 @@ namespace Mirror
                 // get serialization for this entity viewed by this connection
                 // (if anything was serialized this time)
                 NetworkWriter serialization = SerializeForConnection(identity, connection);
-                if (serialization != null)
+                if (serialization != null && (identity.isDirty || identity.lastSerialization.tick == FrameCountCash))  /// UNITYSTATION CODE /// If it's the same frame then it's been serialised already and is dirty stil
                 {
                     EntityStateMessage message = new EntityStateMessage
                     {
@@ -1986,11 +1986,6 @@ namespace Mirror
             CashedLocalTime = NetworkTime.localTime;
 
             Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
-
-            foreach (var connection in connectionsCopy)
-            {
-                connection.Update();
-            }
 
             // TODO this is way too slow because we iterate ALL spawned :/
             // TODO this is way too complicated :/
@@ -2057,6 +2052,7 @@ namespace Mirror
                 }
                 throw;
             }
+            connection.Update(false);
 
         }
 
