@@ -151,7 +151,7 @@ namespace Mirror
         protected abstract void SendToTransport(ArraySegment<byte> segment, int channelId = Channels.Reliable);
 
         // flush batched messages at the end of every Update.
-        internal virtual void Update()
+        internal virtual void Update(bool mainThread = true) //CUSTOM UNITYSTATION CODE// So we can tell if it's on main thread or not
         {
             // go through batches for all channels
             // foreach ((int key, Batcher batcher) in batches) // Unity 2020 doesn't support deconstruct yet
@@ -161,6 +161,16 @@ namespace Mirror
                 // messages.
                 using (NetworkWriterPooled writer = NetworkWriterPool.Get())
                 {
+                    double LocalTime = 0; //CUSTOM UNITYSTATION CODE// So we can access if it's on main thread or not
+                    if (mainThread)
+                    {
+                        LocalTime = NetworkTime.localTime;
+                    }
+                    else
+                    {
+                        LocalTime = NetworkServer.CashedLocalTime;
+                    }
+
                     // make a batch with our local time (double precision)
                     while (kvp.Value.GetBatch(writer))
                     {
