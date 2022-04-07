@@ -1014,12 +1014,15 @@ namespace Mirror
                     // NOTE: this used to be very important to avoid ever growing
                     //       SyncList changes if they had no observers, but we've
                     //       added SyncObject.isRecording since.
+                    
+                    // set tick
+                    lastSerialization.tick = tick;
+
                     //CUSTOM UNITYSTATION CODE// was //ClearDirtyComponentsDirtyBits(); now, so is dirty can be set to false
                     ClearAllComponentsDirtyBits();
 
 
-                    // set tick
-                    lastSerialization.tick = tick;
+
                     //Debug.Log($"{name} (netId={netId}) serialized for tick={tickTimeStamp}");
                 }
             }
