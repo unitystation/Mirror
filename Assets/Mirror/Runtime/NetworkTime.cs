@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using UnityEngine;
 #if !UNITY_2020_3_OR_NEWER
 using Stopwatch = System.Diagnostics.Stopwatch;
@@ -25,16 +26,15 @@ namespace Mirror
         static double offsetMax = double.MaxValue;
 
         /// <summary>Returns double precision clock time _in this system_, unaffected by the network.</summary>
-#if UNITY_2020_3_OR_NEWER
-        public static double localTime => Time.timeAsDouble;
-#else
+
+
+        /// UNITYSTATION CODE /// Thread access violations are a pain This is better in terms of that
         // need stopwatch for older Unity versions, but it's quite slow.
         // CAREFUL: unlike Time.time, this is not a FRAME time.
         //          it changes during the frame too.
         static readonly Stopwatch stopwatch = new Stopwatch();
         static NetworkTime() => stopwatch.Start();
         public static double localTime => stopwatch.Elapsed.TotalSeconds;
-#endif
 
         /// <summary>The time in seconds since the server started.</summary>
         //
