@@ -1628,7 +1628,7 @@ namespace Mirror
                 /// UNITYSTATION CODE ///
                 // Null checks are slow: changed condition.
                 // if (identity != null)
-                if (identity.isDirty || identity.lastSerialization.tick == FrameCountCash)  /// UNITYSTATION CODE /// If it's the same frame then it's been serialised already and is dirty stil
+                if (identity.isDirty)
                 {
                     // get serialization for this entity viewed by this connection
                     // (if anything was serialized this time)
@@ -1701,11 +1701,25 @@ namespace Mirror
             // see test: SyncObjectChanges_DontGrowWithoutObservers()
             //
             // PAUL: we also do this to avoid ever growing SyncList .changes
-            //ClearSpawnedDirtyBits();
+            //CUSTOM UNITYSTATION CODE//
+            //Reintroducing ClearSpawnedDirtyBits
+            ClearSpawnedDirtyBits(); //TODO Work out how to clean this dirty within threaded network loop
             //
             // this was moved to NetworkIdentity.AddObserver!
             // same result, but no more O(N) loop in here!
             // TODO remove this comment after moving spawning into Broadcast()!
+        }
+
+        //CUSTOM UNITYSTATION CODE//
+        public static void ClearSpawnedDirtyBits()
+        {
+            foreach (NetworkIdentity identity in NetworkIdentity.spawned.Values)
+            {
+                if (identity.isDirty)
+                {
+                    identity.ClearAllComponentsDirtyBits();
+                }
+            }
         }
 
 
