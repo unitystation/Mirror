@@ -1799,10 +1799,6 @@ namespace Mirror
             //      same result, without the O(N) iteration in Broadcast().
             //
             // TODO remove this after moving spawning into Broadcast()!
-            if (observers.Count == 0)
-            {
-                ClearAllComponentsDirtyBits();
-            }
 
             observers[conn.connectionId] = conn;
             conn.AddToObserving(this);
