@@ -2005,11 +2005,25 @@ namespace Mirror
             // see test: SyncObjectChanges_DontGrowWithoutObservers()
             //
             // PAUL: we also do this to avoid ever growing SyncList .changes
-            //ClearSpawnedDirtyBits();
+            //CUSTOM UNITYSTATION CODE//
+            //Reintroducing ClearSpawnedDirtyBits
+            ClearSpawnedDirtyBits(); //TODO Work out how to clean this dirty within threaded network loop
             //
             // this was moved to NetworkIdentity.AddObserver!
             // same result, but no more O(N) loop in here!
             // TODO remove this comment after moving spawning into Broadcast()!
+        }
+
+        //CUSTOM UNITYSTATION CODE//
+        public static void ClearSpawnedDirtyBits()
+        {
+            foreach (NetworkIdentity identity in NetworkIdentity.spawned.Values)
+            {
+                if (identity.isDirty)
+                {
+                    identity.ClearAllComponentsDirtyBits();
+                }
+            }
         }
 
 
