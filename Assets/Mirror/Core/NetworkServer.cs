@@ -1966,7 +1966,6 @@ namespace Mirror
         //CUSTOM UNITYSTATION CODE// thread Safe read Time.frameCount
         public static int FrameCountCash;
         public static bool ApplicationIsPlayingCash;
-        public static double CashedLocalTime;
         static void Broadcast()
         {
             // copy all connections into a helper collection so that
@@ -1983,7 +1982,6 @@ namespace Mirror
             //CUSTOM UNITYSTATION CODE// Cashs Time.frameCount and Parallel loop instead of for loop
             FrameCountCash = Time.frameCount;
             ApplicationIsPlayingCash = Application.isPlaying;
-            CashedLocalTime = NetworkTime.localTime;
 
             Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
 
@@ -2066,7 +2064,7 @@ namespace Mirror
                 }
                 throw;
             }
-            connection.Update(false);
+            connection.Update();
 
         }
 
