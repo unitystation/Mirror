@@ -241,7 +241,7 @@ namespace Mirror
         // (timestamp is the same while inside Update)
         // => this way we don't need to pool thousands of writers either.
         // => way easier to store them per object
-        public NetworkIdentitySerialization lastSerialization = new NetworkIdentitySerialization
+        NetworkIdentitySerialization lastSerialization = new NetworkIdentitySerialization
         {
             ownerWriter = new NetworkWriter(),
             observersWriter = new NetworkWriter()
@@ -1642,15 +1642,12 @@ namespace Mirror
                     // NOTE: this used to be very important to avoid ever growing
                     //       SyncList changes if they had no observers, but we've
                     //       added SyncObject.isRecording since.
-                    
+                    //CUSTOM UNITYSTATION CODE// was //ClearDirtyComponentsDirtyBits(); Is dirty reset is done in separate loop
+
+
+
                     // set tick
                     lastSerialization.tick = tick;
-
-                    //CUSTOM UNITYSTATION CODE// was //ClearDirtyComponentsDirtyBits(); now, so is dirty can be set to false
-                    ClearAllComponentsDirtyBits();
-
-
-
                     //Debug.Log($"{name} (netId={netId}) serialized for tick={tickTimeStamp}");
                 }
             }

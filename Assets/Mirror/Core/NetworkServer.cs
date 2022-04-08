@@ -1967,6 +1967,18 @@ namespace Mirror
 
         }
 
+        //CUSTOM UNITYSTATION CODE//
+        public static void ClearSpawnedDirtyBits()
+        {
+            foreach (NetworkIdentity identity in NetworkIdentity.spawned.Values)
+            {
+                if (identity.isDirty)
+                {
+                    identity.ClearAllComponentsDirtyBits();
+                }
+            }
+        }
+
 
         //CUSTOM UNITYSTATION CODE// Added part of Broadcast Logic
         public static void SubConnectionBroadcast(NetworkConnectionToClient connection)
