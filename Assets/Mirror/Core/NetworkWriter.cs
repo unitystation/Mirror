@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 
@@ -12,6 +13,9 @@ namespace Mirror
         // the limit of ushort is so we can write string size prefix as only 2 bytes.
         // -1 so we can still encode 'null' into it too.
         public const ushort MaxStringLength = ushort.MaxValue - 1;
+        public Thread ClaimedThread;
+
+        public const int MaxStringLength = 1024 * 32;
 
         // create writer immediately with it's own buffer so no one can mess with it and so that we can resize it.
         // note: BinaryWriter allocates too much, so we only use a MemoryStream
@@ -133,6 +137,14 @@ namespace Mirror
                 return;
             }
 #endif
+
+            if (ClaimedThread != null)
+            {
+                if (Thread.CurrentThread != ClaimedThread)
+                {
+                    Debug.LogError("OH SHIT Wrong thread is using this");
+                }
+            }
             // calculate size
             //   sizeof(T) gets the managed size at compile time.
             //   Marshal.SizeOf<T> gets the unmanaged size at runtime (slow).
@@ -150,6 +162,7 @@ namespace Mirror
             // write blittable
             fixed (byte* ptr = &buffer[Position])
             {
+
 #if UNITY_ANDROID
                 // on some android systems, assigning *(T*)ptr throws a NRE if
                 // the ptr isn't aligned (i.e. if Position is 1,2,3,5, etc.).

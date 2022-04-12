@@ -1,8 +1,15 @@
 // API consistent with Microsoft's ObjectPool<T>.
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace Mirror
 {
+    /// <summary>Pooled NetworkWriter, automatically returned to pool when using 'using'</summary>
+    public sealed class PooledNetworkWriter : NetworkWriter, IDisposable
+    {
+        public void Dispose() => NetworkWriterPool.Recycle(this);
+    }
+
     /// <summary>Pool of NetworkWriters to avoid allocations.</summary>
     public static class NetworkWriterPool
     {
@@ -26,6 +33,7 @@ namespace Mirror
                 // grab from pool & reset position
                 NetworkWriterPooled writer = Pool.Get();
                 writer.Reset();
+                writer.ClaimedThread = Thread.CurrentThread;
                 return writer;
             }
 
@@ -37,6 +45,7 @@ namespace Mirror
         {
             lock (Pool) //thread shenanigans
             {
+                writer.ClaimedThread = null;
                 Pool.Return(writer);
             }
         }
