@@ -133,14 +133,6 @@ namespace Mirror
                 return;
             }
 #endif
-
-            if (ClaimedThread != null)
-            {
-                if (Thread.CurrentThread != ClaimedThread)
-                {
-                    Debug.LogError("OH SHIT Wrong thread is using this");
-                }
-            }
             // calculate size
             //   sizeof(T) gets the managed size at compile time.
             //   Marshal.SizeOf<T> gets the unmanaged size at runtime (slow).
@@ -158,7 +150,6 @@ namespace Mirror
             // write blittable
             fixed (byte* ptr = &buffer[Position])
             {
-
 #if UNITY_ANDROID
                 // on some android systems, assigning *(T*)ptr throws a NRE if
                 // the ptr isn't aligned (i.e. if Position is 1,2,3,5, etc.).
