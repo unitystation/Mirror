@@ -1618,8 +1618,7 @@ namespace Mirror
         // helper function to broadcast the world to a connection
         static void BroadcastToConnection(NetworkConnectionToClient connection)
         {
-            lock (NetworkServer.observerSceneList)
-            {
+
             // for each entity that this connection is seeing
             foreach (NetworkIdentity identity in connection.observing)
             {
@@ -1627,7 +1626,8 @@ namespace Mirror
                 // (which can happen if someone uses
                 //  GameObject.Destroy instead of
                 //  NetworkServer.Destroy)
-
+                lock (NetworkServer.observerSceneList)
+                {
                 /// UNITYSTATION CODE ///
                 // Null checks are slow: changed condition.
                 // if (identity != null)
@@ -1649,7 +1649,9 @@ namespace Mirror
 
                         }
 
+                } 
                 }
+
                 // spawned list should have no null entries because we
                 // always call Remove in OnObjectDestroy everywhere.
                 // if it does have null then someone used
@@ -1657,7 +1659,6 @@ namespace Mirror
                 /// UNITYSTATION CODE ///
                 // Comment out this warning (we now assume identity is not null as it is faster).
                 //else Debug.LogWarning($"Found 'null' entry in observing list for connectionId={connection.connectionId}. Please call NetworkServer.Destroy to destroy networked objects. Don't use GameObject.Destroy.");
-            }
 
             }
         }
