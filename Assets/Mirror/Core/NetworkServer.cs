@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Mirror.RemoteCalls;
 using UnityEngine;
@@ -1961,12 +1962,22 @@ namespace Mirror
             FrameCountCash = Time.frameCount;
             ApplicationIsPlayingCash = Application.isPlaying;
 
+            var task = Task.Factory.StartNew(() =>
+            {
+                foreach (var connection in connectionsCopy)
+                {
+                    SubConnectionBroadcast(connection);
+                }
+                return "A";
+            });
+            var taskA = task.Result;
+
             //Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
 
-            foreach (var connection in connectionsCopy)
-            {
-                SubConnectionBroadcast(connection);
-            }
+
+            //The issue is definitely threading
+            //humm, maybe if it's all completely one-on-one thread linearly yeah
+
 
         }
 
@@ -1982,6 +1993,12 @@ namespace Mirror
             }
         }
 
+
+        public static void TOPSubConnectionBroadcast()
+        {
+
+
+        }
 
         //CUSTOM UNITYSTATION CODE// Added part of Broadcast Logic
         public static void SubConnectionBroadcast(NetworkConnectionToClient connection)
