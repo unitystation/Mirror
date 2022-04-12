@@ -1827,6 +1827,8 @@ namespace Mirror
                 // Comment out this warning (we now assume identity is not null as it is faster).
                 //else Debug.LogWarning($"Found 'null' entry in observing list for connectionId={connection.connectionId}. Please call NetworkServer.Destroy to destroy networked objects. Don't use GameObject.Destroy.");
             }
+
+            }
         }
 
         // helper function to check a connection for inactivity and disconnect if necessary
@@ -1962,21 +1964,7 @@ namespace Mirror
             FrameCountCash = Time.frameCount;
             ApplicationIsPlayingCash = Application.isPlaying;
 
-            var task = Task.Factory.StartNew(() =>
-            {
-                foreach (var connection in connectionsCopy)
-                {
-                    SubConnectionBroadcast(connection);
-                }
-                return "A";
-            });
-            var taskA = task.Result;
-
-            //Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
-
-
-            //The issue is definitely threading
-            //humm, maybe if it's all completely one-on-one thread linearly yeah
+            Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
 
 
         }
