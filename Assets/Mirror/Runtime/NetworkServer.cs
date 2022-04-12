@@ -1686,7 +1686,7 @@ namespace Mirror
             {
                 foreach (var connection in connectionsCopy)
                 {
-                    Debug.Log(connection.identity.gameObject.GetInstanceID());
+                    Debug.Log(connection.address);
                 }
             }
 
