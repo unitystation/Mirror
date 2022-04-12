@@ -178,7 +178,6 @@ namespace Mirror
                 Batcher batcher = kvp.Value;
                 using (PooledNetworkWriter writer = NetworkWriterPool.GetWriter())
                 {
-                    double LocalTime = 0; //CUSTOM UNITYSTATION CODE// So we can access if it's on main thread or not
                     // make a batch with our local time (double precision)
                     while (batcher.MakeNextBatch(writer,  NetworkTime.localTime))
                     {
