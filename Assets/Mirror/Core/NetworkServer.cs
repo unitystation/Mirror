@@ -1984,21 +1984,7 @@ namespace Mirror
             FrameCountCash = Time.frameCount;
             ApplicationIsPlayingCash = Application.isPlaying;
 
-            var task = Task.Factory.StartNew(() =>
-            {
-                foreach (var connection in connectionsCopy)
-                {
-                    SubConnectionBroadcast(connection);
-                }
-                return "A";
-            });
-            var taskA = task.Result;
-
-            //Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
-
-
-            //The issue is definitely threading
-            //humm, maybe if it's all completely one-on-one thread linearly yeah
+            Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
 
 
             // TODO this is way too slow because we iterate ALL spawned :/
