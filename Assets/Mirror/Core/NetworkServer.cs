@@ -1804,7 +1804,8 @@ namespace Mirror
                 // (which can happen if someone uses
                 //  GameObject.Destroy instead of
                 //  NetworkServer.Destroy)
-
+                lock (NetworkServer.observerSceneList)
+                {
                 /// UNITYSTATION CODE ///
                 // Null checks are slow: changed condition.
                 // if (identity != null)
@@ -1826,7 +1827,6 @@ namespace Mirror
                 /// UNITYSTATION CODE ///
                 // Comment out this warning (we now assume identity is not null as it is faster).
                 //else Debug.LogWarning($"Found 'null' entry in observing list for connectionId={connection.connectionId}. Please call NetworkServer.Destroy to destroy networked objects. Don't use GameObject.Destroy.");
-            }
 
             }
         }
