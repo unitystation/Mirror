@@ -1,6 +1,5 @@
 using System;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 
@@ -9,8 +8,6 @@ namespace Mirror
     /// <summary>Network Writer for most simple types like floats, ints, buffers, structs, etc. Use NetworkWriterPool.GetReader() to avoid allocations.</summary>
     public class NetworkWriter
     {
-        public Thread ClaimedThread;
-
         public const int MaxStringLength = 1024 * 32;
 
         // create writer immediately with it's own buffer so no one can mess with it and so that we can resize it.
@@ -97,14 +94,6 @@ namespace Mirror
                 return;
             }
 #endif
-
-            if (ClaimedThread != null)
-            {
-                if (Thread.CurrentThread != ClaimedThread)
-                {
-                    Debug.LogError("OH SHIT Wrong thread is using this");
-                }
-            }
             // calculate size
             //   sizeof(T) gets the managed size at compile time.
             //   Marshal.SizeOf<T> gets the unmanaged size at runtime (slow).
@@ -122,7 +111,6 @@ namespace Mirror
             // write blittable
             fixed (byte* ptr = &buffer[Position])
             {
-
 #if UNITY_ANDROID
                 // on some android systems, assigning *(T*)ptr throws a NRE if
                 // the ptr isn't aligned (i.e. if Position is 1,2,3,5, etc.).

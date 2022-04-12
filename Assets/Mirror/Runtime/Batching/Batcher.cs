@@ -8,6 +8,7 @@
 // includes timestamp for tick batching.
 // -> allows NetworkTransform etc. to use timestamp without including it in
 //    every single message
+
 using System;
 using System.Collections.Generic;
 
@@ -64,36 +65,40 @@ namespace Mirror
         // returns true if any batch was made.
         public bool MakeNextBatch(NetworkWriter writer, double timeStamp)
         {
-            // if we have no messages then there's nothing to do
-            if (messages.Count == 0)
-                return false;
-
-            // make sure the writer is fresh to avoid uncertain situations
-            if (writer.Position != 0)
-                throw new ArgumentException($"MakeNextBatch needs a fresh writer!");
-
-            // write timestamp first
-            // -> double precision for accuracy over long periods of time
-            writer.WriteDouble(timeStamp);
-
-            // do start no matter what
-            do
+            lock (messages)
             {
-                // add next message no matter what. even if > threshold.
-                // (we do allow > threshold sized messages as single batch)
-                PooledNetworkWriter message = messages.Dequeue();
-                ArraySegment<byte> segment = message.ToArraySegment();
-                writer.WriteBytes(segment.Array, segment.Offset, segment.Count);
+                // if we have no messages then there's nothing to do
+                if (messages.Count == 0)
+                    return false;
 
-                // return the writer to pool
-                NetworkWriterPool.Recycle(message);
+                // make sure the writer is fresh to avoid uncertain situations
+                if (writer.Position != 0)
+                    throw new ArgumentException($"MakeNextBatch needs a fresh writer!");
+
+                // write timestamp first
+                // -> double precision for accuracy over long periods of time
+                writer.WriteDouble(timeStamp);
+
+                // do start no matter what
+                do
+                {
+                    // add next message no matter what. even if > threshold.
+                    // (we do allow > threshold sized messages as single batch)
+                    PooledNetworkWriter message = messages.Dequeue();
+                    ArraySegment<byte> segment = message.ToArraySegment();
+                    writer.WriteBytes(segment.Array, segment.Offset, segment.Count);
+
+                    // return the writer to pool
+                    NetworkWriterPool.Recycle(message);
+                }
+                // keep going as long as we have more messages,
+                // AND the next one would fit into threshold.
+                while (messages.Count > 0 &&
+                       writer.Position + messages.Peek().Position <= threshold);
+
+                // we had messages, so a batch was made
             }
-            // keep going as long as we have more messages,
-            // AND the next one would fit into threshold.
-            while (messages.Count > 0 &&
-                   writer.Position + messages.Peek().Position <= threshold);
 
-            // we had messages, so a batch was made
             return true;
         }
     }
