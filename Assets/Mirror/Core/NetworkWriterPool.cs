@@ -1,6 +1,5 @@
 // API consistent with Microsoft's ObjectPool<T>.
 using System.Runtime.CompilerServices;
-using System.Threading;
 
 namespace Mirror
 {
@@ -33,7 +32,6 @@ namespace Mirror
                 // grab from pool & reset position
                 NetworkWriterPooled writer = Pool.Get();
                 writer.Reset();
-                writer.ClaimedThread = Thread.CurrentThread;
                 return writer;
             }
 
@@ -45,7 +43,6 @@ namespace Mirror
         {
             lock (Pool) //thread shenanigans
             {
-                writer.ClaimedThread = null;
                 Pool.Return(writer);
             }
         }
