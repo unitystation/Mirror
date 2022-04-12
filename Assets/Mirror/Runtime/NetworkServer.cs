@@ -1618,6 +1618,8 @@ namespace Mirror
         // helper function to broadcast the world to a connection
         static void BroadcastToConnection(NetworkConnectionToClient connection)
         {
+            lock (NetworkServer.observerSceneList)
+            {
             // for each entity that this connection is seeing
             foreach (NetworkIdentity identity in connection.observing)
             {
@@ -1631,8 +1633,7 @@ namespace Mirror
                 // if (identity != null)
                 if (identity.isDirty)
                 {
-                    lock (NetworkServer.observerSceneList)
-                    {
+
                         // get serialization for this entity viewed by this connection
                         // (if anything was serialized this time)
                         NetworkWriter serialization = GetEntitySerializationForConnection(identity, connection);
@@ -1647,7 +1648,7 @@ namespace Mirror
                                 connection.Send(message);
 
                         }
-                    }
+
                 }
                 // spawned list should have no null entries because we
                 // always call Remove in OnObjectDestroy everywhere.
@@ -1656,6 +1657,8 @@ namespace Mirror
                 /// UNITYSTATION CODE ///
                 // Comment out this warning (we now assume identity is not null as it is faster).
                 //else Debug.LogWarning($"Found 'null' entry in observing list for connectionId={connection.connectionId}. Please call NetworkServer.Destroy to destroy networked objects. Don't use GameObject.Destroy.");
+            }
+
             }
         }
 
@@ -1685,21 +1688,7 @@ namespace Mirror
             FrameCountCash = Time.frameCount;
             ApplicationIsPlayingCash = Application.isPlaying;
 
-            var task = Task.Factory.StartNew(() =>
-            {
-                foreach (var connection in connectionsCopy)
-                {
-                    SubConnectionBroadcast(connection);
-                }
-                return "A";
-            });
-            var taskA = task.Result;
-
-            //Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
-
-
-            //The issue is definitely threading
-            //humm, maybe if it's all completely one-on-one thread linearly yeah
+            Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
 
 
             // TODO this is way too slow because we iterate ALL spawned :/
