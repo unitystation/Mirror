@@ -1662,9 +1662,6 @@ namespace Mirror
         //CUSTOM UNITYSTATION CODE// thread Safe read Time.frameCount
         public static int FrameCountCash;
         public static bool ApplicationIsPlayingCash;
-
-        public static int DEBUGFrameCountCash;
-
         static void Broadcast()
         {
             // copy all connections into a helper collection so that
@@ -1682,18 +1679,7 @@ namespace Mirror
             FrameCountCash = Time.frameCount;
             ApplicationIsPlayingCash = Application.isPlaying;
 
-            if ((Mathf.Abs(DEBUGFrameCountCash - FrameCountCash) > 300))
-            {
-                Debug.Log(connectionsCopy.Count);
-            }
-
-
             Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
-
-            foreach (var connection in connectionsCopy)
-            {
-                connection.Update();
-            }
 
             // TODO this is way too slow because we iterate ALL spawned :/
             // TODO this is way too complicated :/
@@ -1746,7 +1732,7 @@ namespace Mirror
                 // broadcast world state to this connection
                 BroadcastToConnection(connection);
             }
-
+            connection.Update();
 
         }
 
