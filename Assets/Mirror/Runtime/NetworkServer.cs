@@ -1684,10 +1684,7 @@ namespace Mirror
 
             if ((Mathf.Abs(DEBUGFrameCountCash - FrameCountCash) > 300))
             {
-                foreach (var connection in connectionsCopy)
-                {
-                    Debug.Log(connection.address);
-                }
+                Debug.Log(connectionsCopy.Count);
             }
 
 
