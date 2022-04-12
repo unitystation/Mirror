@@ -1983,7 +1983,12 @@ namespace Mirror
             FrameCountCash = Time.frameCount;
             ApplicationIsPlayingCash = Application.isPlaying;
 
-            Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
+            //Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
+
+            foreach (var connection in connectionsCopy)
+            {
+                SubConnectionBroadcast(connection);
+            }
 
             // TODO this is way too slow because we iterate ALL spawned :/
             // TODO this is way too complicated :/
