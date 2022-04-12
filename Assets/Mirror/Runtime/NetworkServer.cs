@@ -1630,19 +1630,21 @@ namespace Mirror
                 // if (identity != null)
                 if (identity.isDirty)
                 {
-                    // get serialization for this entity viewed by this connection
-                    // (if anything was serialized this time)
-                    NetworkWriter serialization = GetEntitySerializationForConnection(identity, connection);
-                    if (serialization != null)
+                    lock (NetworkServer.observerSceneList)
                     {
-                        EntityStateMessage message = new EntityStateMessage
+                        // get serialization for this entity viewed by this connection
+                        // (if anything was serialized this time)
+                        NetworkWriter serialization = GetEntitySerializationForConnection(identity, connection);
+                        if (serialization != null)
                         {
-                            netId = identity.netId,
-                            payload = serialization.ToArraySegment()
-                        };
-                        lock (NetworkServer.observerSceneList)
-                        {
-                            connection.Send(message);
+                            EntityStateMessage message = new EntityStateMessage
+                            {
+                                netId = identity.netId,
+                                payload = serialization.ToArraySegment()
+                            };
+
+                                connection.Send(message);
+
                         }
                     }
                 }
