@@ -1640,7 +1640,10 @@ namespace Mirror
                             netId = identity.netId,
                             payload = serialization.ToArraySegment()
                         };
-                        connection.Send(message);
+                        lock (NetworkServer.observerSceneList)
+                        {
+                            connection.Send(message);
+                        }
                     }
                 }
                 // spawned list should have no null entries because we
