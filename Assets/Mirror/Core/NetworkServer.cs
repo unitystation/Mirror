@@ -1961,7 +1961,12 @@ namespace Mirror
             FrameCountCash = Time.frameCount;
             ApplicationIsPlayingCash = Application.isPlaying;
 
-            Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
+            //Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
+
+            foreach (var connection in connectionsCopy)
+            {
+                SubConnectionBroadcast(connection);
+            }
 
         }
 
