@@ -1690,10 +1690,10 @@ namespace Mirror
             Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
 
 
-            foreach (var connection in connectionsCopy)
-            {
-                connection.Update();
-            }
+            // foreach (var connection in connectionsCopy)
+            // {
+            //     connection.Update();
+            // }
 
             // TODO this is way too slow because we iterate ALL spawned :/
             // TODO this is way too complicated :/
@@ -1752,6 +1752,7 @@ namespace Mirror
                 // broadcast world state to this connection
                 BroadcastToConnection(connection);
             }
+            connection.Update();
         }
 
 
