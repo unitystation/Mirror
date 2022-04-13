@@ -1626,8 +1626,7 @@ namespace Mirror
                 // (which can happen if someone uses
                 //  GameObject.Destroy instead of
                 //  NetworkServer.Destroy)
-                lock (NetworkServer.observerSceneList)//TODO This reduces the thread errors, but I imagine that is in update
-                {
+
                 /// UNITYSTATION CODE ///
                 // Null checks are slow: changed condition.
                 // if (identity != null)
@@ -1637,20 +1636,20 @@ namespace Mirror
                         // get serialization for this entity viewed by this connection
                         // (if anything was serialized this time)
                         NetworkWriter serialization = GetEntitySerializationForConnection(identity, connection);
-                        if (serialization != null)
+                        lock (NetworkServer.observerSceneList)//TODO This reduces the thread errors, but I imagine that is in update
                         {
-                            EntityStateMessage message = new EntityStateMessage
+                            if (serialization != null)
                             {
-                                netId = identity.netId,
-                                payload = serialization.ToArraySegment()
-                            };
-
+                                EntityStateMessage message = new EntityStateMessage
+                                {
+                                    netId = identity.netId,
+                                    payload = serialization.ToArraySegment()
+                                };
                                 connection.Send(message);
-
+                            }
                         }
+                }
 
-                }
-                }
 
                 // spawned list should have no null entries because we
                 // always call Remove in OnObjectDestroy everywhere.
