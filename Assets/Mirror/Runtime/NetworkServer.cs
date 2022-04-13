@@ -1635,19 +1635,18 @@ namespace Mirror
 
                         // get serialization for this entity viewed by this connection
                         // (if anything was serialized this time)
-                        NetworkWriter serialization = GetEntitySerializationForConnection(identity, connection);
-                        // lock (NetworkServer.observerSceneList)//TODO This reduces the thread errors, but I imagine that is in update
-                        // {
-                            if (serialization != null)
-                            {
-                                EntityStateMessage message = new EntityStateMessage
-                                {
-                                    netId = identity.netId,
-                                    payload = serialization.ToArraySegment()
-                                };
-                                connection.Send(message);
-                            }
-                        // }
+                    NetworkWriter serialization = GetEntitySerializationForConnection(identity, connection);
+
+                    if (serialization != null)
+                    {
+                        EntityStateMessage message = new EntityStateMessage
+                        {
+                            netId = identity.netId,
+                            payload = serialization.ToArraySegment()
+                        };
+                        connection.Send(message);
+                    }
+
                 }
 
 
