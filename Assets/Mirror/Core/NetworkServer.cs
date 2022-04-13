@@ -1804,8 +1804,7 @@ namespace Mirror
                 // (which can happen if someone uses
                 //  GameObject.Destroy instead of
                 //  NetworkServer.Destroy)
-                lock (NetworkServer.observerSceneList)//TODO This reduces the thread errors, but I imagine that is in update
-                {
+
                 /// UNITYSTATION CODE ///
                 // Null checks are slow: changed condition.
                 // if (identity != null)
