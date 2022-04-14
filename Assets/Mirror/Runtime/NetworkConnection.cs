@@ -190,7 +190,11 @@ namespace Mirror
                         if (ValidatePacketSize(segment, kvp.Key))
                         {
                             // send to transport
-                            SendToTransport(segment, kvp.Key);
+                            lock (NetworkServer.aoi)
+                            {
+                                SendToTransport(segment, kvp.Key);
+                            }
+                            
                             //UnityEngine.Debug.Log($"sending batch of {writer.Position} bytes for channel={kvp.Key} connId={connectionId}");
 
                             // reset writer for each new batch
