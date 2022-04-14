@@ -2006,7 +2006,7 @@ namespace Mirror
             // PAUL: we also do this to avoid ever growing SyncList .changes
             //CUSTOM UNITYSTATION CODE//
             //Reintroducing ClearSpawnedDirtyBits
-            ClearSpawnedDirtyBits(); //TODO Work out how to clean this dirty within threaded network loop
+            //ClearSpawnedDirtyBits(); //TODO Work out how to clean this dirty within threaded network loop
             //
             // this was moved to NetworkIdentity.AddObserver!
             // same result, but no more O(N) loop in here!
@@ -2066,7 +2066,7 @@ namespace Mirror
                 throw;
             }
             connection.Update();
-            
+
         }
 
         // update //////////////////////////////////////////////////////////////

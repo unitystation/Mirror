@@ -1654,6 +1654,21 @@ namespace Mirror
             }
         }
 
+        public bool IsSameLastSerializationTick(int tick)
+        {
+            lock (lastSerialization.observersWriter)
+            {
+                if (lastSerialization.tick == tick)
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+        }
+
         // get cached serialization for this tick (or serialize if none yet)
         // IMPORTANT: int tick avoids floating point inaccuracy over days/weeks
         internal NetworkIdentitySerialization GetSerializationAtTick(int tick)
@@ -1697,13 +1712,15 @@ namespace Mirror
                     // NOTE: this used to be very important to avoid ever growing
                     //       SyncList changes if they had no observers, but we've
                     //       added SyncObject.isRecording since.
-                    //CUSTOM UNITYSTATION CODE// was //ClearDirtyComponentsDirtyBits(); Is dirty reset is done in separate loop
+
 
 
 
                     // set tick
                     lastSerialization.tick = tick;
                     //Debug.Log($"{name} (netId={netId}) serialized for tick={tickTimeStamp}");
+
+                    ClearAllComponentsDirtyBits();
                 }
             }
 
