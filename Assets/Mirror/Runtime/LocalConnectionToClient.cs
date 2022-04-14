@@ -23,10 +23,7 @@ namespace Mirror
             //Debug.Log($"Enqueue {BitConverter.ToString(segment.Array, segment.Offset, segment.Count)}");
             PooledNetworkWriter writer = NetworkWriterPool.GetWriter();
             writer.WriteBytes(segment.Array, segment.Offset, segment.Count);
-            // lock (connectionToServer.queue)
-            // {
-                connectionToServer.queue.Enqueue(writer);
-            // }
+            connectionToServer.queue.Enqueue(writer);
         }
 
         // true because local connections never timeout

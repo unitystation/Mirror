@@ -1965,7 +1965,6 @@ namespace Mirror
 
             Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
 
-
         }
 
         //CUSTOM UNITYSTATION CODE//
@@ -1981,12 +1980,6 @@ namespace Mirror
         }
 
 
-        public static void TOPSubConnectionBroadcast()
-        {
-
-
-        }
-
         //CUSTOM UNITYSTATION CODE// Added part of Broadcast Logic
         public static void SubConnectionBroadcast(NetworkConnectionToClient connection)
         {
@@ -1999,6 +1992,7 @@ namespace Mirror
                 BroadcastToConnection(connection);
             }
             connection.Update();
+
         }
 
 
