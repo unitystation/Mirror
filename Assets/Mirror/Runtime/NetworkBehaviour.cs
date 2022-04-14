@@ -145,6 +145,8 @@ namespace Mirror
         {
             /// UNITYSTATION CODE ///
             // It's presumed to be dirty already since the addition of isDirty on the network component
+            //TODO Investigate putting is dirty on individual network behaviours, To reduce network usage
+            //Even down to the individual syncVar? vs Performance
             return true;
 
             //if (NetworkTime.localTime - lastSyncTime >= syncInterval)

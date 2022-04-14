@@ -1630,11 +1630,11 @@ namespace Mirror
                 /// UNITYSTATION CODE ///
                 // Null checks are slow: changed condition.
                 // if (identity != null)
-                if (identity.isDirty)
+                if (identity.isDirty || identity.IsSameLastSerializationTick(FrameCountCash))
                 {
 
-                        // get serialization for this entity viewed by this connection
-                        // (if anything was serialized this time)
+                    // get serialization for this entity viewed by this connection
+                    // (if anything was serialized this time)
                     NetworkWriter serialization = GetEntitySerializationForConnection(identity, connection);
 
                     if (serialization != null)
@@ -1709,7 +1709,7 @@ namespace Mirror
             // PAUL: we also do this to avoid ever growing SyncList .changes
             //CUSTOM UNITYSTATION CODE//
             //Reintroducing ClearSpawnedDirtyBits
-            ClearSpawnedDirtyBits(); //TODO Work out how to clean this dirty within threaded network loop
+            //ClearSpawnedDirtyBits(); //TODO Work out how to clean this dirty within threaded network loop
             //
             // this was moved to NetworkIdentity.AddObserver!
             // same result, but no more O(N) loop in here!
@@ -1741,7 +1741,7 @@ namespace Mirror
                 BroadcastToConnection(connection);
             }
             connection.Update();
-            
+
         }
 
 
