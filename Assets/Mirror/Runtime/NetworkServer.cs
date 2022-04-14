@@ -1689,12 +1689,6 @@ namespace Mirror
 
             Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
 
-
-            // foreach (var connection in connectionsCopy)
-            // {
-            //     connection.Update();
-            // }
-
             // TODO this is way too slow because we iterate ALL spawned :/
             // TODO this is way too complicated :/
             // to understand what this tries to prevent, consider this example:
@@ -1735,12 +1729,6 @@ namespace Mirror
         }
 
 
-        public static void TOPSubConnectionBroadcast()
-        {
-
-
-        }
-
         //CUSTOM UNITYSTATION CODE// Added part of Broadcast Logic
         public static void SubConnectionBroadcast(NetworkConnectionToClient connection)
         {
@@ -1753,6 +1741,7 @@ namespace Mirror
                 BroadcastToConnection(connection);
             }
             connection.Update();
+            
         }
 
 
