@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Mirror.RemoteCalls;
 using UnityEngine;
@@ -1617,6 +1618,7 @@ namespace Mirror
         // helper function to broadcast the world to a connection
         static void BroadcastToConnection(NetworkConnectionToClient connection)
         {
+
             // for each entity that this connection is seeing
             foreach (NetworkIdentity identity in connection.observing)
             {
@@ -1630,9 +1632,11 @@ namespace Mirror
                 // if (identity != null)
                 if (identity.isDirty)
                 {
-                    // get serialization for this entity viewed by this connection
-                    // (if anything was serialized this time)
+
+                        // get serialization for this entity viewed by this connection
+                        // (if anything was serialized this time)
                     NetworkWriter serialization = GetEntitySerializationForConnection(identity, connection);
+
                     if (serialization != null)
                     {
                         EntityStateMessage message = new EntityStateMessage
@@ -1642,7 +1646,10 @@ namespace Mirror
                         };
                         connection.Send(message);
                     }
+
                 }
+
+
                 // spawned list should have no null entries because we
                 // always call Remove in OnObjectDestroy everywhere.
                 // if it does have null then someone used
@@ -1650,6 +1657,7 @@ namespace Mirror
                 /// UNITYSTATION CODE ///
                 // Comment out this warning (we now assume identity is not null as it is faster).
                 //else Debug.LogWarning($"Found 'null' entry in observing list for connectionId={connection.connectionId}. Please call NetworkServer.Destroy to destroy networked objects. Don't use GameObject.Destroy.");
+
             }
         }
 
@@ -1733,7 +1741,7 @@ namespace Mirror
                 BroadcastToConnection(connection);
             }
             connection.Update();
-
+            
         }
 
 
