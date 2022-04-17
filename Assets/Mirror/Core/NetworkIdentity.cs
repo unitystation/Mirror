@@ -1532,7 +1532,7 @@ namespace Mirror
             catch (Exception e)
             {
                 // show a detailed error and let the user know what went wrong
-                Debug.LogError($"OnSerialize failed for: object={name} component={comp.GetType()} sceneId={sceneId:X}\n\n{e}");
+                Debug.LogError($"OnSerialize failed for: object component={comp.GetType()} sceneId={sceneId:X}\n\n{e}"); /// UNITYSTATION CODE /// Removed name because it would cause thread errors
             }
             int endPosition = writer.Position;
 
