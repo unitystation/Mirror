@@ -95,6 +95,11 @@ namespace Mirror
         public static bool disconnectInactiveConnections;
         public static float disconnectInactiveTimeout = 60;
 
+        /// <summary>
+        /// CUSTOM UNITYSTATION CODE Somewhere to put the logs from all the threads of errors
+        /// </summary>
+        public static string LogString = "";
+
         // OnConnected / OnDisconnected used to be NetworkMessages that were
         // invoked. this introduced a bug where external clients could send
         // Connected/Disconnected messages over the network causing undefined
@@ -1986,6 +1991,13 @@ namespace Mirror
 
             Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
 
+            //CUSTOM UNITYSTATION CODE// Log any errors that happened inside of the threads
+            if (string.IsNullOrEmpty(LogString) == false)
+            {
+                Debug.LogError(LogString);
+                LogString = "";
+            }
+
             // TODO this is way too slow because we iterate ALL spawned :/
             // TODO this is way too complicated :/
             // to understand what this tries to prevent, consider this example:
@@ -2065,7 +2077,6 @@ namespace Mirror
                 }
                 throw;
             }
-            connection.Update();
 
         }
 
