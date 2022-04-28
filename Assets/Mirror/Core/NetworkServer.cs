@@ -97,6 +97,11 @@ namespace Mirror
         public static bool disconnectInactiveConnections;
         public static float disconnectInactiveTimeout = 60;
 
+        /// <summary>
+        /// CUSTOM UNITYSTATION CODE Somewhere to put the logs from all the threads of errors
+        /// </summary>
+        public static string LogString = "";
+
         // OnConnected / OnDisconnected used to be NetworkMessages that were
         // invoked. this introduced a bug where external clients could send
         // Connected/Disconnected messages over the network causing undefined
@@ -1983,15 +1988,29 @@ namespace Mirror
         //CUSTOM UNITYSTATION CODE// Added part of Broadcast Logic
         public static void SubConnectionBroadcast(NetworkConnectionToClient connection)
         {
-            // has this connection joined the world yet?
-            // for each READY connection:
-            //   pull in UpdateVarsMessage for each entity it observes
-            if (connection.isReady)
+            //CUSTOM UNITYSTATION CODE//  So we can log any errors that go on With Unity funnies with logs on Thread
+            try
             {
-                // broadcast world state to this connection
-                BroadcastToConnection(connection);
+                // has this connection joined the world yet?
+                // for each READY connection:
+                //   pull in UpdateVarsMessage for each entity it observes
+                if (connection.isReady)
+                {
+                    // broadcast world state to this connection
+                    BroadcastToConnection(connection);
+                }
+                connection.Update();
+
             }
-            connection.Update();
+            catch (Exception e)
+            {
+                lock (aoi)
+                {
+                    LogString += "\n";
+                    LogString += e.ToString();
+                }
+                throw;
+            }
 
         }
 
