@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 
@@ -128,7 +129,11 @@ namespace Mirror
             catch (Exception e)
             {
                 Debug.LogError($"Disconnecting connId={conn.connectionId} to prevent exploits from an Exception in MessageHandler: {e.GetType().Name} {e.Message}\n{e.StackTrace}");
-                conn.Disconnect();
+                /// UNITYSTATION CODE ///
+                if (NetworkServer.spawned.First().Value.isServer) //To prevent stupid disconnect from client having an error on their end
+                {
+                    conn.Disconnect();
+                }
             }
         };
 
