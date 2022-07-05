@@ -1,5 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
+using System.Text;
+using System.Threading;
 
 namespace Mirror
 {
@@ -17,36 +19,30 @@ namespace Mirror
         // position before reusing.
         // this is also more consistent with NetworkReaderPool where we need to
         // assign the internal buffer before reusing.
-        static readonly Pool<PooledNetworkWriter> Pool = new Pool<PooledNetworkWriter>(
-            () => new PooledNetworkWriter(),
-            // initial capacity to avoid allocations in the first few frames
-            // 1000 * 1200 bytes = around 1 MB.
-            1000
-        );
+        //CUSTOM UNITYSTATION CODE// So it can be safely gotten, Without Thread funnies and size was reduced because we don't care about some GC on the initial frames
+        private static readonly ThreadLocal<Pool<PooledNetworkWriter>> Pool =
+            new ThreadLocal<Pool<PooledNetworkWriter>>(() => new Pool<PooledNetworkWriter>(
+                () => new PooledNetworkWriter(),
+                // initial capacity to avoid allocations in the first few frames
+                // 1000 * 1200 bytes = around 1 MB.
+                1
+            ));
 
         /// <summary>Get a writer from the pool. Creates new one if pool is empty.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static PooledNetworkWriter GetWriter()
         {
-            //CUSTOM UNITYSTATION CODE// So it can be safely gotten, Without Thread funnies
-            lock (Pool)
-            {
-                // grab from pool & reset position
-                PooledNetworkWriter writer = Pool.Take();
-                writer.Reset();
-                return writer;
-            }
+            // grab from pool & reset position
+            PooledNetworkWriter writer = Pool.Value.Take();
+            writer.Reset();
+            return writer;
         }
 
         /// <summary>Return a writer to the pool.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Recycle(PooledNetworkWriter writer)
         {
-            //CUSTOM UNITYSTATION CODE// So it can be safely Added back, Without Thread funnies
-            lock (Pool)
-            {
-                Pool.Return(writer);
-            }
+            Pool.Value.Return(writer);
         }
     }
 }
