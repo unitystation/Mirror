@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Mirror.RemoteCalls;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 
 namespace Mirror
 {
@@ -1929,12 +1931,7 @@ namespace Mirror
                 /// UNITYSTATION CODE ///
                 // Null checks are slow: changed condition.
                 // if (identity != null)
-                var identity = connection.DirtyObserving[i];
-
-                // get serialization for this entity viewed by this connection
-                // (if anything was serialized this time)
-                NetworkWriter serialization = SerializeForConnection(identity, connection);
-                if (serialization != null && (identity.isDirty || identity.lastSerialization.tick == FrameCountCash))  /// UNITYSTATION CODE /// If it's the same frame then it's been serialised already and is dirty stil
+                if (identity.isDirty || identity.IsSameLastSerializationTick(FrameCountCash)) //This is thread safe because is dirty gets set false after IsSameLastSerializationTick is set, So it should never be reading it while it's getting change
                 {
                     EntityStateMessage message = new EntityStateMessage
                     {

@@ -1,4 +1,6 @@
 // API consistent with Microsoft's ObjectPool<T>.
+using System;
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 
 namespace Mirror
@@ -23,6 +25,24 @@ namespace Mirror
             // 1000 * 1200 bytes = around 1 MB.
             1000
         );
+
+        //CUSTOM UNITYSTATION CODE// So it can be safely gotten, Without Thread funnies
+        public class ObjectPool<T>
+        {
+            private readonly ConcurrentBag<T> _objects;
+            private readonly Func<T> _objectGenerator;
+
+            public ObjectPool(Func<T> objectGenerator, int Size )
+            {
+                _objectGenerator = objectGenerator ?? throw new ArgumentNullException(nameof(objectGenerator));
+                _objects = new ConcurrentBag<T>();
+            }
+
+            public T Take() => _objects.TryTake(out T item) ? item : _objectGenerator();
+
+            public void Return(T item) => _objects.Add(item);
+        }
+
 
         /// <summary>Get a writer from the pool. Creates new one if pool is empty.</summary>
         public static NetworkWriterPooled Get()
