@@ -1,5 +1,7 @@
 // API consistent with Microsoft's ObjectPool<T>.
 using System.Runtime.CompilerServices;
+using System.Text;
+using System.Threading;
 
 namespace Mirror
 {
@@ -40,7 +42,7 @@ namespace Mirror
         public static NetworkWriterPooled Get()
         {
             // grab from pool & reset position
-            PooledNetworkWriter writer = Pool.Take();
+            PooledNetworkWriter writer = Pool.Value.Take();
             writer.Reset();
             return writer;
         }
@@ -49,7 +51,7 @@ namespace Mirror
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Return(NetworkWriterPooled writer)
         {
-            Pool.Return(writer);
+            Pool.Value.Return(writer);
         }
     }
 }
