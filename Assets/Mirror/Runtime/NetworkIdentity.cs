@@ -973,17 +973,15 @@ namespace Mirror
 
         public bool IsSameLastSerializationTick(int tick)
         {
-            lock (lastSerialization.observersWriter)
+            if (lastSerialization.tick == tick)
             {
-                if (lastSerialization.tick == tick)
-                {
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
+                return true;
             }
+            else
+            {
+                return false;
+            }
+
         }
 
         // get cached serialization for this tick (or serialize if none yet)
