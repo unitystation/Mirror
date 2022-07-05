@@ -1678,9 +1678,6 @@ namespace Mirror
         public static int FrameCountCash;
         public static bool ApplicationIsPlayingCash;
 
-        public static Stopwatch SW = new Stopwatch();
-        public static bool Traditional = true;
-
         static void Broadcast()
         {
             // copy all connections into a helper collection so that
@@ -1698,9 +1695,6 @@ namespace Mirror
             FrameCountCash = Time.frameCount;
             ApplicationIsPlayingCash = Application.isPlaying;
 
-            SW.Reset();
-            SW.Start();
-
             Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
 
 
@@ -1710,12 +1704,6 @@ namespace Mirror
                 Debug.LogError(LogString);
                 LogString = "";
             }
-
-            SW.Stop();
-
-            Debug.LogError($"Traditional = {Traditional} took " + SW.ElapsedTicks  + " Ticks ");
-
-            Traditional = !Traditional;
 
             // TODO this is way too slow because we iterate ALL spawned :/
             // TODO this is way too complicated :/

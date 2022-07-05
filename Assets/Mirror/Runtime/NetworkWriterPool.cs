@@ -28,56 +28,21 @@ namespace Mirror
                 1
             ));
 
-
-        static readonly Pool<PooledNetworkWriter> TraditionalPool = new Pool<PooledNetworkWriter>(
-            () => new PooledNetworkWriter(),
-            // initial capacity to avoid allocations in the first few frames
-            // 1000 * 1200 bytes = around 1 MB.
-            1000
-        );
-
         /// <summary>Get a writer from the pool. Creates new one if pool is empty.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static PooledNetworkWriter GetWriter()
         {
-            if (NetworkServer.Traditional)
-            {
-                //CUSTOM UNITYSTATION CODE// So it can be safely gotten, Without Thread funnies
-                lock (TraditionalPool)
-                {
-                    // grab from pool & reset position
-                    PooledNetworkWriter writer = TraditionalPool.Take();
-                    writer.Reset();
-                    return writer;
-                }
-            }
-            else
-            {
-                // grab from pool & reset position
-                PooledNetworkWriter writer = Pool.Value.Take();
-                writer.Reset();
-                return writer;
-            }
-
+            // grab from pool & reset position
+            PooledNetworkWriter writer = Pool.Value.Take();
+            writer.Reset();
+            return writer;
         }
 
         /// <summary>Return a writer to the pool.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Recycle(PooledNetworkWriter writer)
         {
-            if (NetworkServer.Traditional)
-            {
-                //CUSTOM UNITYSTATION CODE// So it can be safely gotten, Without Thread funnies
-                lock (TraditionalPool)
-                {
-                    TraditionalPool.Return(writer);
-                }
-            }
-            else
-            {
-                Pool.Value.Return(writer);
-            }
-
+            Pool.Value.Return(writer);
         }
     }
 }
