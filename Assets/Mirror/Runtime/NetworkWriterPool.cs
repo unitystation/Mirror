@@ -1,6 +1,7 @@
 using System;
-using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
+using System.Text;
+using System.Threading;
 
 namespace Mirror
 {
@@ -18,29 +19,14 @@ namespace Mirror
         // position before reusing.
         // this is also more consistent with NetworkReaderPool where we need to
         // assign the internal buffer before reusing.
-        static readonly ObjectPool<PooledNetworkWriter> Pool = new ObjectPool<PooledNetworkWriter>(
-            () => new PooledNetworkWriter(),
-            // initial capacity to avoid allocations in the first few frames
-            // 1000 * 1200 bytes = around 1 MB.
-            1000
-        );
-
-        //CUSTOM UNITYSTATION CODE// So it can be safely gotten, Without Thread funnies
-        public class ObjectPool<T>
-        {
-            private readonly ConcurrentBag<T> _objects;
-            private readonly Func<T> _objectGenerator;
-
-            public ObjectPool(Func<T> objectGenerator, int Size )
-            {
-                _objectGenerator = objectGenerator ?? throw new ArgumentNullException(nameof(objectGenerator));
-                _objects = new ConcurrentBag<T>();
-            }
-
-            public T Take() => _objects.TryTake(out T item) ? item : _objectGenerator();
-
-            public void Return(T item) => _objects.Add(item);
-        }
+        //CUSTOM UNITYSTATION CODE// So it can be safely gotten, Without Thread funnies and size was reduced because we don't care about some GC on the initial frames
+        private static readonly ThreadLocal<Pool<PooledNetworkWriter>> Pool =
+            new ThreadLocal<Pool<PooledNetworkWriter>>(() => new Pool<PooledNetworkWriter>(
+                () => new PooledNetworkWriter(),
+                // initial capacity to avoid allocations in the first few frames
+                // 1000 * 1200 bytes = around 1 MB.
+                1
+            ));
 
 
         /// <summary>Get a writer from the pool. Creates new one if pool is empty.</summary>
@@ -48,7 +34,7 @@ namespace Mirror
         public static PooledNetworkWriter GetWriter()
         {
             // grab from pool & reset position
-            PooledNetworkWriter writer = Pool.Take();
+            PooledNetworkWriter writer = Pool.Value.Take();
             writer.Reset();
             return writer;
         }
@@ -57,7 +43,7 @@ namespace Mirror
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Recycle(PooledNetworkWriter writer)
         {
-            Pool.Return(writer);
+            Pool.Value.Return(writer);
         }
     }
 }
