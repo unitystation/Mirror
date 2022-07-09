@@ -249,7 +249,7 @@ namespace Mirror
         // (timestamp is the same while inside Update)
         // => this way we don't need to pool thousands of writers either.
         // => way easier to store them per object
-        NetworkIdentitySerialization lastSerialization = new NetworkIdentitySerialization
+        public NetworkIdentitySerialization lastSerialization = new NetworkIdentitySerialization
         {
             ownerWriter = new NetworkWriter(),
             observersWriter = new NetworkWriter()
