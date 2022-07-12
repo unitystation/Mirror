@@ -19,7 +19,7 @@ namespace Mirror
         private static volatile bool OneLocked = false;
         private static volatile bool TwoLocked = false;
         private static volatile int LowestScore = 999999999;
-        private static volatile Pool<PooledNetworkWriter> Lowest = Pools[0];
+
 
         // reuse Pool<T>
         // we still wrap it in NetworkWriterPool.Get/Recycle so we can reset the
@@ -50,6 +50,8 @@ namespace Mirror
                 ),
 
             };
+
+        private static Pool<PooledNetworkWriter> Lowest = Pools[0];
 
         /// <summary>Get a writer from the pool. Creates new one if pool is empty.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
