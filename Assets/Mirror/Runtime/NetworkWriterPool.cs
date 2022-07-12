@@ -72,9 +72,10 @@ namespace Mirror
                         Lowest = Pools[0];
                     }
                     ZeroLocked = false;
+                    writer.Reset();
+                    return writer;
                 }
-                writer.Reset();
-                return writer;
+
             }
 
             if (OneLocked == false)
@@ -90,9 +91,10 @@ namespace Mirror
                         Lowest = Pools[1];
                     }
                     OneLocked = false;
+                    writer.Reset();
+                    return writer;
                 }
-                writer.Reset();
-                return writer;
+
             }
 
             if (TwoLocked == false)
@@ -108,9 +110,10 @@ namespace Mirror
                         Lowest = Pools[2];
                     }
                     TwoLocked = false;
+                    writer.Reset();
+                    return writer;
                 }
-                writer.Reset();
-                return writer;
+
             }
 
             lock (Pools[0])
@@ -130,7 +133,11 @@ namespace Mirror
         public static void Recycle(PooledNetworkWriter writer)
         {
             LowestScore = LowestScore + 1;
-            Lowest.Return(writer);
+            lock (Lowest)
+            {
+                Lowest.Return(writer);
+            }
+
         }
     }
 }
