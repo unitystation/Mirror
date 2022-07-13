@@ -51,13 +51,13 @@ namespace Mirror
                 {
                     foreach (var Observer in observers)
                     {
-                        Observer.Value.DirtyIndex++;
-                        if (Observer.Value.DirtyIndex >= Observer.Value.DirtyObserving.Length)
+                        if (Observer.Value.EmptyIndex >= Observer.Value.DirtyObserving.Length)
                         {
-                            Debug.LogError($" Having to expand observer array expensive!!! how many do you have!!?!? {Observer.Value.DirtyIndex} adding 1000");
+                            Debug.LogError($" Having to expand observer array expensive!!! how many do you have!!?!? {Observer.Value.EmptyIndex} adding 1000");
                             Array.Resize(ref Observer.Value.DirtyObserving, Observer.Value.DirtyObserving.Length + 1000);
                         }
-                        Observer.Value.DirtyObserving[Observer.Value.DirtyIndex] = this;
+                        Observer.Value.DirtyObserving[Observer.Value.EmptyIndex] = this;
+                        Observer.Value.EmptyIndex++;
                     }
                 }
                 else
