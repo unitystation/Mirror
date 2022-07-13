@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
+using UnityEngine;
 
 namespace Mirror
 {
@@ -72,6 +73,10 @@ namespace Mirror
                         Lowest = Pools[0];
                     }
 
+                    if (writer == null)
+                    {
+                        Debug.Log("AAAAAAAAA");
+                    }
                     writer.Reset();
                     ZeroLocked = false;
                     return writer;
