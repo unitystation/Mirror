@@ -82,6 +82,7 @@ namespace Mirror
                     if (writer == null)
                     {
                         Debug.Log("AAAAAAAAA");
+                        writer = GetWriter(); //FYCJ IGNG GET ONE THAT NOT NULL!
                     }
                     writer.Reset();
                     ZeroLocked = false;
