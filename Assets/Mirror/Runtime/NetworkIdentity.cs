@@ -619,6 +619,14 @@ namespace Mirror
                 NetworkServer.Destroy(gameObject);
             }
 
+            if (observers != null)
+            {
+                foreach (var observer in observers)
+                {
+                    observer.Value.RemoveDirty(this);
+                }
+            }
+
             if (isLocalPlayer)
             {
                 // previously there was a bug where isLocalPlayer was
