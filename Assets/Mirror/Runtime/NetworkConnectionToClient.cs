@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Mirror
 {
@@ -46,6 +47,17 @@ namespace Mirror
             // -> so all 'on disconnect' cleanup code needs to be in
             //    OnTransportDisconnect, where it's called for both voluntary
             //    and involuntary disconnects!
+        }
+
+        public void AddDirty(NetworkIdentity Dirty)
+        {
+            if (EmptyIndex >= DirtyObserving.Length)
+            {
+                Debug.LogError($" Having to expand observer array expensive!!! how many do you have!!?!? {EmptyIndex} adding 1000");
+                Array.Resize(ref DirtyObserving, DirtyObserving.Length + 1000);
+            }
+            DirtyObserving[EmptyIndex] = Dirty;
+            EmptyIndex++;
         }
 
         internal void AddToObserving(NetworkIdentity netIdentity)
