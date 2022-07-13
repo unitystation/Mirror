@@ -41,7 +41,7 @@ namespace Mirror
     {
         /// <summary>
         /// UNITYSTATION CODE ///
-        /// TODO: an explanation on why we need this would be nice.
+        /// it is faster to loop through isDirty vs mirror method it checks synch vars individually and loop through every observing
         /// </summary>
         public bool isDirty
         {
@@ -59,7 +59,7 @@ namespace Mirror
                             }
                         }
                     }
-                    
+
                     _isDirty = value;
                 }
                 else
@@ -73,6 +73,7 @@ namespace Mirror
             }
         }
 
+        /// UNITYSTATION CODE ///
         private bool _isDirty;
 
         /// <summary>Returns true if running as a client and this object was spawned by a server.</summary>
@@ -623,6 +624,7 @@ namespace Mirror
                 NetworkServer.Destroy(gameObject);
             }
 
+            /// UNITYSTATION CODE /// just in case if it's still there
             if (observers != null)
             {
                 foreach (var observer in observers)

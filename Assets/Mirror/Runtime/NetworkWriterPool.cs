@@ -15,6 +15,7 @@ namespace Mirror
     /// <summary>Pool of NetworkWriters to avoid allocations.</summary>
     public static class NetworkWriterPool
     {
+        /// UNITYSTATION CODE /// multiple pools to reduce locks waiting
         private static volatile bool ZeroLocked = false;
         private static volatile bool OneLocked = false;
         private static volatile bool TwoLocked = false;
@@ -51,19 +52,21 @@ namespace Mirror
 
             };
 
+        /// UNITYSTATION CODE /// which pool is low
         private static List<Pool<PooledNetworkWriter>> Lowest = new List<Pool<PooledNetworkWriter>>()
         {
             Pools[0],
             Pools[1],
             Pools[2]
         };
-
+        /// UNITYSTATION CODE /// which pool is low
         private static volatile int LowestIndex = 0;
 
         /// <summary>Get a writer from the pool. Creates new one if pool is empty.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static PooledNetworkWriter GetWriter()
         {
+            /// UNITYSTATION CODE /// crazy logic getting the right one
             // grab from pool & reset position
             PooledNetworkWriter writer = null;
             if (ZeroLocked == false)
@@ -142,6 +145,7 @@ namespace Mirror
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Recycle(PooledNetworkWriter writer)
         {
+            /// UNITYSTATION CODE /// crazy logic getting the right one
             if (writer == null) return;
             LowestScore = LowestScore + 1;
             Pool<PooledNetworkWriter> inLowest = Lowest[LowestIndex];
