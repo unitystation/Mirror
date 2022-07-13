@@ -60,6 +60,36 @@ namespace Mirror
             EmptyIndex++;
         }
 
+
+        public void RemoveDirty(NetworkIdentity RemovingDirty)
+        {
+            if (RemovingDirty.isDirty == false) return;
+            var IndexAt = 0;
+
+            for (int i = 0; i < EmptyIndex; i++)
+            {
+                if (DirtyObserving[i] == RemovingDirty)
+                {
+                    IndexAt = i;
+                    break;
+                }
+            }
+
+            if (DirtyObserving[IndexAt] != RemovingDirty) return;
+
+            if (EmptyIndex - 1 == IndexAt)
+            {
+                DirtyObserving[IndexAt] = null;
+                EmptyIndex--;
+            }
+            else
+            {
+                DirtyObserving[IndexAt] = DirtyObserving[EmptyIndex - 1];
+                EmptyIndex--;
+            }
+
+        }
+
         internal void AddToObserving(NetworkIdentity netIdentity)
         {
             observing.Add(netIdentity);
@@ -71,7 +101,7 @@ namespace Mirror
         internal void RemoveFromObserving(NetworkIdentity netIdentity, bool isDestroyed)
         {
             observing.Remove(netIdentity);
-
+            RemoveDirty(netIdentity);
             if (!isDestroyed)
             {
                 // hide identity for this conn
@@ -84,6 +114,7 @@ namespace Mirror
             foreach (NetworkIdentity netIdentity in observing)
             {
                 netIdentity.RemoveObserver(this);
+                RemoveDirty(netIdentity);
             }
             observing.Clear();
         }
