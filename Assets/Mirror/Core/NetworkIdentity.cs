@@ -1872,7 +1872,7 @@ namespace Mirror
             // TODO remove this after moving spawning into Broadcast()!
 
             observers[conn.connectionId] = conn;
-            conn.AddDirty(this);
+
             conn.AddToObserving(this);
         }
 
