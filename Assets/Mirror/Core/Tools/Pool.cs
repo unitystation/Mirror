@@ -31,7 +31,6 @@ namespace Mirror
         public T Get() => objects.Count > 0 ? objects.Pop() : objectGenerator();
 
         // return an element to the pool
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Return(T item) => objects.Push(item);
 
         // count to see how many objects are in the pool. useful for tests.
