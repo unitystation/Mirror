@@ -1626,7 +1626,7 @@ namespace Mirror
         static void BroadcastToConnection(NetworkConnectionToClient connection)
         {
             // for each entity that this connection is seeing
-            for (int i = 0; i < connection.DirtyIndex; i++)
+            for (int i = 0; i <= connection.DirtyIndex; i++)
             {
 
                 // make sure it's not null or destroyed.
@@ -1645,15 +1645,15 @@ namespace Mirror
                     // (if anything was serialized this time)
                 NetworkWriter serialization = GetEntitySerializationForConnection(identity, connection);
 
-                // if (serialization != null)
-                // {
+                if (serialization != null)
+                {
                     EntityStateMessage message = new EntityStateMessage
                     {
                         netId = identity.netId,
                         payload = serialization.ToArraySegment()
                     };
                     connection.Send(message);
-                // }
+                }
 
                 // }
 
