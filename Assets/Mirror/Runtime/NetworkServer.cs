@@ -1645,6 +1645,11 @@ namespace Mirror
 
                     // get serialization for this entity viewed by this connection
                     // (if anything was serialized this time)
+                    if (identity == null)
+                    {
+                        Debug.LogError("oh no!");
+                    }
+
                 NetworkWriter serialization = GetEntitySerializationForConnection(identity, connection);
 
                 if (serialization != null)
