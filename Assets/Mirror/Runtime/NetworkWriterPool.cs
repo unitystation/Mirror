@@ -71,7 +71,10 @@ namespace Mirror
                     if (Count < LowestScore)
                     {
                         LowestScore = Count;
-                        Lowest = PoolZero;
+                        lock (Lowest)
+                        {
+                            Lowest = PoolZero;
+                        }
                     }
 
                     if (writer == null)
@@ -95,7 +98,10 @@ namespace Mirror
                     if (Count < LowestScore)
                     {
                         LowestScore = Count;
-                        Lowest = PoolOne;
+                        lock (Lowest)
+                        {
+                            Lowest = PoolOne;
+                        }
                     }
 
                     writer.Reset();
@@ -115,7 +121,11 @@ namespace Mirror
                     if (Count < LowestScore)
                     {
                         LowestScore = Count;
-                        Lowest = PoolTwo;
+                        lock (Lowest)
+                        {
+                            Lowest = PoolTwo;
+                        }
+
                     }
 
                     writer.Reset();
