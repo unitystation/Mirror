@@ -13,7 +13,7 @@ namespace Mirror
         public new readonly HashSet<NetworkIdentity> observing = new HashSet<NetworkIdentity>();
 
 
-        public int DirtyIndex = 0;
+        public int EmptyIndex = 0;
         public NetworkIdentity[] DirtyObserving = new NetworkIdentity[10000];
 
         /// <summary>All NetworkIdentities owned by this connection. Can be main player, pets, etc.</summary>

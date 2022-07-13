@@ -1626,7 +1626,7 @@ namespace Mirror
         static void BroadcastToConnection(NetworkConnectionToClient connection)
         {
             // for each entity that this connection is seeing
-            for (int i = 0; i <= connection.DirtyIndex; i++)
+            for (int i = 0; i < connection.EmptyIndex; i++)
             {
 
                 // make sure it's not null or destroyed.
@@ -1668,7 +1668,7 @@ namespace Mirror
 
             }
 
-            connection.DirtyIndex = 0;
+            connection.EmptyIndex = 0;
         }
 
         // NetworkLateUpdate called after any Update/FixedUpdate/LateUpdate
