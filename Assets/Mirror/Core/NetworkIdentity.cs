@@ -49,16 +49,20 @@ namespace Mirror
             {
                 if (_isDirty == false)
                 {
-                    foreach (var Observer in observers)
+                    if (observers != null)
                     {
-                        if (Observer.Value.EmptyIndex >= Observer.Value.DirtyObserving.Length)
+                        foreach (var Observer in observers)
                         {
-                            Debug.LogError($" Having to expand observer array expensive!!! how many do you have!!?!? {Observer.Value.EmptyIndex} adding 1000");
-                            Array.Resize(ref Observer.Value.DirtyObserving, Observer.Value.DirtyObserving.Length + 1000);
+                            if (Observer.Value.EmptyIndex >= Observer.Value.DirtyObserving.Length)
+                            {
+                                Debug.LogError($" Having to expand observer array expensive!!! how many do you have!!?!? {Observer.Value.EmptyIndex} adding 1000");
+                                Array.Resize(ref Observer.Value.DirtyObserving, Observer.Value.DirtyObserving.Length + 1000);
+                            }
+                            Observer.Value.DirtyObserving[Observer.Value.EmptyIndex] = this;
+                            Observer.Value.EmptyIndex++;
                         }
-                        Observer.Value.DirtyObserving[Observer.Value.EmptyIndex] = this;
-                        Observer.Value.EmptyIndex++;
                     }
+                    _isDirty = value;
                 }
                 else
                 {
