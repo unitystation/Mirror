@@ -63,7 +63,6 @@ namespace Mirror
 
         public void RemoveDirty(NetworkIdentity RemovingDirty)
         {
-            if (RemovingDirty.isDirty == false) return;
             var IndexAt = 0;
 
             for (int i = 0; i < EmptyIndex; i++)
@@ -85,6 +84,7 @@ namespace Mirror
             else
             {
                 DirtyObserving[IndexAt] = DirtyObserving[EmptyIndex - 1];
+                DirtyObserving[EmptyIndex - 1] = null;
                 EmptyIndex--;
             }
 
