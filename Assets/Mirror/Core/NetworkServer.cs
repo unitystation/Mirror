@@ -1923,7 +1923,6 @@ namespace Mirror
         // helper function to broadcast the world to a connection
         static void BroadcastToConnection(NetworkConnectionToClient connection)
         {
-
             var cashedEmpty = connection.EmptyIndex;
             connection.EmptyIndex = 0;
             for (int i = 0; i < cashedEmpty; i++)
@@ -1944,7 +1943,7 @@ namespace Mirror
                 connection.DirtyObserving[i] = null;
             }
 
-            connection.DirtyIndex = 0;
+            connection.EmptyIndex = 0;
         }
 
         // helper function to check a connection for inactivity and disconnect if necessary
