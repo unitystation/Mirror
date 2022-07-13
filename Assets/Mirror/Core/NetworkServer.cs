@@ -1626,6 +1626,7 @@ namespace Mirror
         static void BroadcastToConnection(NetworkConnectionToClient connection)
         {
             // for each entity that this connection is seeing
+            /// UNITYSTATION CODE /// removed old loop is now
             var cashedEmpty = connection.EmptyIndex;
             connection.EmptyIndex = 0;
             for (int i = 0; i < cashedEmpty; i++)
@@ -1640,6 +1641,7 @@ namespace Mirror
                 // Null checks are slow: changed condition.
                 // if (identity != null)
                 var identity = connection.DirtyObserving[i];
+                /// UNITYSTATION CODE /// no longer need to check for is dirty because is always dirty
                 // if (identity.isDirty || identity.lastSerialization.tick == FrameCountCash) //This is thread safe because is dirty gets set false after IsSameLastSerializationTick is set, So it should never be reading it while it's getting change
                 // {
 
@@ -1674,8 +1676,6 @@ namespace Mirror
                 //else Debug.LogWarning($"Found 'null' entry in observing list for connectionId={connection.connectionId}. Please call NetworkServer.Destroy to destroy networked objects. Don't use GameObject.Destroy.");
 
             }
-
-            connection.EmptyIndex = 0;
         }
 
         // NetworkLateUpdate called after any Update/FixedUpdate/LateUpdate

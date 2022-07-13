@@ -14,8 +14,9 @@ namespace Mirror
         public new readonly HashSet<NetworkIdentity> observing = new HashSet<NetworkIdentity>();
 
 
+        /// UNITYSTATION CODE /// Faster than looping through observing
         public int EmptyIndex = 0;
-        public NetworkIdentity[] DirtyObserving = new NetworkIdentity[10000];
+        public NetworkIdentity[] DirtyObserving = new NetworkIdentity[1000];
 
         /// <summary>All NetworkIdentities owned by this connection. Can be main player, pets, etc.</summary>
         // IMPORTANT: this needs to be <NetworkIdentity>, not <uint netId>.
@@ -49,6 +50,7 @@ namespace Mirror
             //    and involuntary disconnects!
         }
 
+        /// UNITYSTATION CODE /// logic for adding new dirty
         public void AddDirty(NetworkIdentity Dirty)
         {
             if (EmptyIndex >= DirtyObserving.Length)
@@ -60,7 +62,7 @@ namespace Mirror
             EmptyIndex++;
         }
 
-
+        /// UNITYSTATION CODE /// logic for adding removing
         public void RemoveDirty(NetworkIdentity RemovingDirty)
         {
             var IndexAt = 0;
@@ -93,6 +95,7 @@ namespace Mirror
         internal void AddToObserving(NetworkIdentity netIdentity)
         {
             observing.Add(netIdentity);
+            /// UNITYSTATION CODE /// dirty!
             AddDirty(netIdentity);
             // spawn identity for this conn
             NetworkServer.ShowForConnection(netIdentity, this);
@@ -101,6 +104,7 @@ namespace Mirror
         internal void RemoveFromObserving(NetworkIdentity netIdentity, bool isDestroyed)
         {
             observing.Remove(netIdentity);
+            /// UNITYSTATION CODE /// dirty! is not now
             RemoveDirty(netIdentity);
             if (!isDestroyed)
             {
@@ -114,6 +118,7 @@ namespace Mirror
             foreach (NetworkIdentity netIdentity in observing)
             {
                 netIdentity.RemoveObserver(this);
+                /// UNITYSTATION CODE /// dirty! is not now
                 RemoveDirty(netIdentity);
             }
             observing.Clear();
