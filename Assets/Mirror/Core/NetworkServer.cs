@@ -1942,8 +1942,6 @@ namespace Mirror
 
                 connection.DirtyObserving[i] = null;
             }
-
-            connection.EmptyIndex = 0;
         }
 
         // helper function to check a connection for inactivity and disconnect if necessary
