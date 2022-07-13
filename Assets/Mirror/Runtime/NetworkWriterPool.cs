@@ -55,6 +55,8 @@ namespace Mirror
 
         private static Pool<PooledNetworkWriter> Lowest;
 
+        private static PooledNetworkWriter LowestLock = new PooledNetworkWriter();
+
         /// <summary>Get a writer from the pool. Creates new one if pool is empty.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static PooledNetworkWriter GetWriter()
@@ -71,7 +73,7 @@ namespace Mirror
                     if (Count < LowestScore)
                     {
                         LowestScore = Count;
-                        lock (Lowest)
+                        lock (LowestLock)
                         {
                             Lowest = PoolZero;
                         }
@@ -98,7 +100,7 @@ namespace Mirror
                     if (Count < LowestScore)
                     {
                         LowestScore = Count;
-                        lock (Lowest)
+                        lock (LowestLock)
                         {
                             Lowest = PoolOne;
                         }
@@ -121,7 +123,7 @@ namespace Mirror
                     if (Count < LowestScore)
                     {
                         LowestScore = Count;
-                        lock (Lowest)
+                        lock (LowestLock)
                         {
                             Lowest = PoolTwo;
                         }
@@ -152,7 +154,7 @@ namespace Mirror
         public static void Recycle(PooledNetworkWriter writer)
         {
             LowestScore = LowestScore + 1;
-            lock (Lowest)
+            lock (LowestLock)
             {
                 Lowest.Return(writer);
             }
