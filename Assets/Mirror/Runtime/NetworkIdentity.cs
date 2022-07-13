@@ -43,8 +43,35 @@ namespace Mirror
         /// UNITYSTATION CODE ///
         /// TODO: an explanation on why we need this would be nice.
         /// </summary>
-        [NonSerialized]
-        public bool isDirty;
+        public bool isDirty
+        {
+            set
+            {
+                if (_isDirty == false)
+                {
+                    foreach (var Observer in observers)
+                    {
+                        Observer.Value.DirtyIndex++;
+                        if (Observer.Value.DirtyIndex >= Observer.Value.DirtyObserving.Length)
+                        {
+                            Debug.LogError($" Having to expand observer array expensive!!! how many do you have!!?!? {Observer.Value.DirtyIndex} adding 1000");
+                            Array.Resize(ref Observer.Value.DirtyObserving, Observer.Value.DirtyObserving.Length + 1000);
+                        }
+                        Observer.Value.DirtyObserving[Observer.Value.DirtyIndex] = this;
+                    }
+                }
+                else
+                {
+                    _isDirty = value;
+                }
+            }
+            get
+            {
+                return _isDirty;
+            }
+        }
+
+        private bool _isDirty;
 
         /// <summary>Returns true if running as a client and this object was spawned by a server.</summary>
         //

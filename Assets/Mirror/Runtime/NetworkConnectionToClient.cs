@@ -12,6 +12,10 @@ namespace Mirror
         // TODO move to server's NetworkConnectionToClient?
         public new readonly HashSet<NetworkIdentity> observing = new HashSet<NetworkIdentity>();
 
+
+        public int DirtyIndex = 0;
+        public NetworkIdentity[] DirtyObserving = new NetworkIdentity[10000];
+
         /// <summary>All NetworkIdentities owned by this connection. Can be main player, pets, etc.</summary>
         // IMPORTANT: this needs to be <NetworkIdentity>, not <uint netId>.
         //            fixes a bug where DestroyOwnedObjects wouldn't find the
