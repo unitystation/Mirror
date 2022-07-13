@@ -157,7 +157,10 @@ namespace Mirror
             LowestScore = LowestScore + 1;
             lock (LowestLock)
             {
-                Lowest.Return(writer);
+                lock (Lowest) //Damn deadlock better not be!!!!
+                {
+                    Lowest.Return(writer);
+                }
             }
 
         }
