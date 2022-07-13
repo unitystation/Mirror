@@ -63,7 +63,7 @@ namespace Mirror
         internal void AddToObserving(NetworkIdentity netIdentity)
         {
             observing.Add(netIdentity);
-
+            AddDirty(netIdentity);
             // spawn identity for this conn
             NetworkServer.ShowForConnection(netIdentity, this);
         }
