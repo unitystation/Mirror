@@ -53,13 +53,7 @@ namespace Mirror
                     {
                         foreach (var Observer in observers)
                         {
-                            if (Observer.Value.EmptyIndex >= Observer.Value.DirtyObserving.Length)
-                            {
-                                Debug.LogError($" Having to expand observer array expensive!!! how many do you have!!?!? {Observer.Value.EmptyIndex} adding 1000");
-                                Array.Resize(ref Observer.Value.DirtyObserving, Observer.Value.DirtyObserving.Length + 1000);
-                            }
-                            Observer.Value.DirtyObserving[Observer.Value.EmptyIndex] = this;
-                            Observer.Value.EmptyIndex++;
+                            Observer.Value.AddDirty(this);
                         }
                     }
                     _isDirty = value;
@@ -1219,6 +1213,7 @@ namespace Mirror
             // TODO remove this after moving spawning into Broadcast()!
 
             observers[conn.connectionId] = conn;
+            conn.AddDirty(this);
             conn.AddToObserving(this);
         }
 
