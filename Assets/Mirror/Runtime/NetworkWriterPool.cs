@@ -28,31 +28,32 @@ namespace Mirror
         // this is also more consistent with NetworkReaderPool where we need to
         // assign the internal buffer before reusing.
         //CUSTOM UNITYSTATION CODE// So it can be safely gotten, Without Thread funnies and size was reduced because we don't care about some GC on the initial frames
-        private static readonly List<Pool<PooledNetworkWriter>> Pools =
-            new List<Pool<PooledNetworkWriter>>()
-            {
-                new Pool<PooledNetworkWriter>(
-                    () => new PooledNetworkWriter(),
-                    // initial capacity to avoid allocations in the first few frames
-                    // 1000 * 1200 bytes = around 1 MB.
-                    100
-                ),
-                new Pool<PooledNetworkWriter>(
-                    () => new PooledNetworkWriter(),
-                    // initial capacity to avoid allocations in the first few frames
-                    // 1000 * 1200 bytes = around 1 MB.
-                    100
-                ),
-                new Pool<PooledNetworkWriter>(
-                    () => new PooledNetworkWriter(),
-                    // initial capacity to avoid allocations in the first few frames
-                    // 1000 * 1200 bytes = around 1 MB.
-                    100
-                ),
+        private static readonly Pool<PooledNetworkWriter> PoolZero =
+        new Pool<PooledNetworkWriter>(
+        () => new PooledNetworkWriter(),
+            // initial capacity to avoid allocations in the first few frames
+            // 1000 * 1200 bytes = around 1 MB.
+            100
+            );
 
-            };
+        private static readonly Pool<PooledNetworkWriter> PoolOne =
+            new Pool<PooledNetworkWriter>(
+                () => new PooledNetworkWriter(),
+                // initial capacity to avoid allocations in the first few frames
+                // 1000 * 1200 bytes = around 1 MB.
+                100
+            );
 
-        private static Pool<PooledNetworkWriter> Lowest = Pools[0];
+
+        private static readonly Pool<PooledNetworkWriter> PoolTwo =
+            new Pool<PooledNetworkWriter>(
+                () => new PooledNetworkWriter(),
+                // initial capacity to avoid allocations in the first few frames
+                // 1000 * 1200 bytes = around 1 MB.
+                100
+            );
+
+        private static Pool<PooledNetworkWriter> Lowest = PoolOne;
 
         /// <summary>Get a writer from the pool. Creates new one if pool is empty.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -62,15 +63,15 @@ namespace Mirror
             PooledNetworkWriter writer = null;
             if (ZeroLocked == false)
             {
-                lock (Pools[0])
+                lock (PoolZero)
                 {
                     ZeroLocked = true;
-                    writer = Pools[0].Take();
-                    int Count = Pools[0].Count;
+                    writer = PoolZero.Take();
+                    int Count = PoolZero.Count;
                     if (Count < LowestScore)
                     {
                         LowestScore = Count;
-                        Lowest = Pools[0];
+                        Lowest = PoolZero;
                     }
 
                     if (writer == null)
@@ -86,15 +87,15 @@ namespace Mirror
 
             if (OneLocked == false)
             {
-                lock (Pools[1])
+                lock (PoolOne)
                 {
                     OneLocked = true;
-                    writer = Pools[1].Take();
-                    int Count = Pools[1].Count;
+                    writer = PoolOne.Take();
+                    int Count = PoolOne.Count;
                     if (Count < LowestScore)
                     {
                         LowestScore = Count;
-                        Lowest = Pools[1];
+                        Lowest = PoolOne;
                     }
 
                     writer.Reset();
@@ -106,15 +107,15 @@ namespace Mirror
 
             if (TwoLocked == false)
             {
-                lock (Pools[2])
+                lock (PoolTwo)
                 {
                     TwoLocked = true;
-                    writer = Pools[2].Take();
-                    int Count = Pools[2].Count;
+                    writer = PoolTwo.Take();
+                    int Count = PoolTwo.Count;
                     if (Count < LowestScore)
                     {
                         LowestScore = Count;
-                        Lowest = Pools[2];
+                        Lowest = PoolTwo;
                     }
 
                     writer.Reset();
@@ -124,10 +125,10 @@ namespace Mirror
 
             }
 
-            lock (Pools[0])
+            lock (PoolOne)
             {
                 ZeroLocked = true;
-                writer = Pools[0].Take();
+                writer = PoolOne.Take();
                 writer.Reset();
                 ZeroLocked = false;
                 return writer;
@@ -140,7 +141,6 @@ namespace Mirror
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Recycle(PooledNetworkWriter writer)
         {
-            if (writer == null) return;
             LowestScore = LowestScore + 1;
             lock (Lowest)
             {
