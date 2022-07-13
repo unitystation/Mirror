@@ -53,10 +53,10 @@ namespace Mirror
                 100
             );
 
-        private static Pool<PooledNetworkWriter> Lowest = PoolOne;
+        private static Pool<PooledNetworkWriter> Lowest;
 
         /// <summary>Get a writer from the pool. Creates new one if pool is empty.</summary>
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static PooledNetworkWriter GetWriter()
         {
             // grab from pool & reset position
@@ -148,7 +148,7 @@ namespace Mirror
 
 
         /// <summary>Return a writer to the pool.</summary>
-       // [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Recycle(PooledNetworkWriter writer)
         {
             LowestScore = LowestScore + 1;
