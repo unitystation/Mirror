@@ -60,6 +60,7 @@ namespace Mirror
                     {
                         Observer.Value.AddDirty(this);
                     }
+
                     _isDirty = value;
                 }
                 _isDirty = value;
