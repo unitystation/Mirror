@@ -1625,10 +1625,13 @@ namespace Mirror
         // helper function to broadcast the world to a connection
         static void BroadcastToConnection(NetworkConnectionToClient connection)
         {
-
             // for each entity that this connection is seeing
-            foreach (NetworkIdentity identity in connection.observing)
+            /// UNITYSTATION CODE /// removed old loop is now
+            var cashedEmpty = connection.EmptyIndex;
+            connection.EmptyIndex = 0;
+            for (int i = 0; i < cashedEmpty; i++)
             {
+
                 // make sure it's not null or destroyed.
                 // (which can happen if someone uses
                 //  GameObject.Destroy instead of
@@ -1637,26 +1640,33 @@ namespace Mirror
                 /// UNITYSTATION CODE ///
                 // Null checks are slow: changed condition.
                 // if (identity != null)
-                if (identity.isDirty || identity.lastSerialization.tick == FrameCountCash) //This is thread safe because is dirty gets set false after IsSameLastSerializationTick is set, So it should never be reading it while it's getting change
-                {
+                var identity = connection.DirtyObserving[i];
+                /// UNITYSTATION CODE /// no longer need to check for is dirty because is always dirty
+                // if (identity.isDirty || identity.lastSerialization.tick == FrameCountCash) //This is thread safe because is dirty gets set false after IsSameLastSerializationTick is set, So it should never be reading it while it's getting change
+                // {
 
                     // get serialization for this entity viewed by this connection
                     // (if anything was serialized this time)
-                    NetworkWriter serialization = GetEntitySerializationForConnection(identity, connection);
-
-                    if (serialization != null)
+                    if (identity == null)
                     {
-                        EntityStateMessage message = new EntityStateMessage
-                        {
-                            netId = identity.netId,
-                            payload = serialization.ToArraySegment()
-                        };
-                        connection.Send(message);
+                        Debug.LogError("oh no!");
                     }
 
+                NetworkWriter serialization = GetEntitySerializationForConnection(identity, connection);
+
+                if (serialization != null)
+                {
+                    EntityStateMessage message = new EntityStateMessage
+                    {
+                        netId = identity.netId,
+                        payload = serialization.ToArraySegment()
+                    };
+                    connection.Send(message);
                 }
 
+                // }
 
+                connection.DirtyObserving[i] = null;
                 // spawned list should have no null entries because we
                 // always call Remove in OnObjectDestroy everywhere.
                 // if it does have null then someone used

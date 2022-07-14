@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Mirror
 {
@@ -11,6 +12,11 @@ namespace Mirror
         /// <summary>NetworkIdentities that this connection can see</summary>
         // TODO move to server's NetworkConnectionToClient?
         public new readonly HashSet<NetworkIdentity> observing = new HashSet<NetworkIdentity>();
+
+
+        /// UNITYSTATION CODE /// Faster than looping through observing
+        public int EmptyIndex = 0;
+        public NetworkIdentity[] DirtyObserving = new NetworkIdentity[1000];
 
         /// <summary>All NetworkIdentities owned by this connection. Can be main player, pets, etc.</summary>
         // IMPORTANT: this needs to be <NetworkIdentity>, not <uint netId>.
@@ -44,10 +50,53 @@ namespace Mirror
             //    and involuntary disconnects!
         }
 
+        /// UNITYSTATION CODE /// logic for adding new dirty
+        public void AddDirty(NetworkIdentity Dirty)
+        {
+            if (EmptyIndex >= DirtyObserving.Length)
+            {
+                Debug.LogError($" Having to expand observer array expensive!!! how many do you have!!?!? {EmptyIndex} adding 1000");
+                Array.Resize(ref DirtyObserving, DirtyObserving.Length + 1000);
+            }
+            DirtyObserving[EmptyIndex] = Dirty;
+            EmptyIndex++;
+        }
+
+        /// UNITYSTATION CODE /// logic for adding removing
+        public void RemoveDirty(NetworkIdentity RemovingDirty)
+        {
+            var IndexAt = 0;
+
+            for (int i = 0; i < EmptyIndex; i++)
+            {
+                if (DirtyObserving[i] == RemovingDirty)
+                {
+                    IndexAt = i;
+                    break;
+                }
+            }
+
+            if (DirtyObserving[IndexAt] != RemovingDirty) return;
+
+            if (EmptyIndex - 1 == IndexAt)
+            {
+                DirtyObserving[IndexAt] = null;
+                EmptyIndex--;
+            }
+            else
+            {
+                DirtyObserving[IndexAt] = DirtyObserving[EmptyIndex - 1];
+                DirtyObserving[EmptyIndex - 1] = null;
+                EmptyIndex--;
+            }
+
+        }
+
         internal void AddToObserving(NetworkIdentity netIdentity)
         {
             observing.Add(netIdentity);
-
+            /// UNITYSTATION CODE /// dirty!
+            AddDirty(netIdentity);
             // spawn identity for this conn
             NetworkServer.ShowForConnection(netIdentity, this);
         }
@@ -55,7 +104,8 @@ namespace Mirror
         internal void RemoveFromObserving(NetworkIdentity netIdentity, bool isDestroyed)
         {
             observing.Remove(netIdentity);
-
+            /// UNITYSTATION CODE /// dirty! is not now
+            RemoveDirty(netIdentity);
             if (!isDestroyed)
             {
                 // hide identity for this conn
@@ -68,6 +118,8 @@ namespace Mirror
             foreach (NetworkIdentity netIdentity in observing)
             {
                 netIdentity.RemoveObserver(this);
+                /// UNITYSTATION CODE /// dirty! is not now
+                RemoveDirty(netIdentity);
             }
             observing.Clear();
         }

@@ -41,10 +41,40 @@ namespace Mirror
     {
         /// <summary>
         /// UNITYSTATION CODE ///
-        /// TODO: an explanation on why we need this would be nice.
+        /// it is faster to loop through isDirty vs mirror method it checks synch vars individually and loop through every observing
         /// </summary>
-        [NonSerialized]
-        public bool isDirty;
+        public bool isDirty
+        {
+            set
+            {
+                if (_isDirty == false)
+                {
+                    if (value)
+                    {
+                        if (observers != null)
+                        {
+                            foreach (var Observer in observers)
+                            {
+                                Observer.Value.AddDirty(this);
+                            }
+                        }
+                    }
+
+                    _isDirty = value;
+                }
+                else
+                {
+                    _isDirty = value;
+                }
+            }
+            get
+            {
+                return _isDirty;
+            }
+        }
+
+        /// UNITYSTATION CODE ///
+        private bool _isDirty;
 
         /// <summary>Returns true if running as a client and this object was spawned by a server.</summary>
         //
@@ -592,6 +622,15 @@ namespace Mirror
             {
                 // Do not add logging to this (see above)
                 NetworkServer.Destroy(gameObject);
+            }
+
+            /// UNITYSTATION CODE /// just in case if it's still there
+            if (observers != null)
+            {
+                foreach (var observer in observers)
+                {
+                    observer.Value.RemoveDirty(this);
+                }
             }
 
             if (isLocalPlayer)
@@ -1188,6 +1227,7 @@ namespace Mirror
             // TODO remove this after moving spawning into Broadcast()!
 
             observers[conn.connectionId] = conn;
+
             conn.AddToObserving(this);
         }
 
