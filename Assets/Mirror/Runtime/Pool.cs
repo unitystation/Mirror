@@ -8,7 +8,7 @@ namespace Mirror
     public class Pool<T>
     {
         // Mirror is single threaded, no need for concurrent collections
-        readonly Stack<T> objects = new Stack<T>();
+        public readonly Stack<T> objects = new Stack<T>();
 
         // some types might need additional parameters in their constructor, so
         // we use a Func<T> generator
