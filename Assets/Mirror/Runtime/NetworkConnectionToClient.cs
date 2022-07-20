@@ -16,7 +16,7 @@ namespace Mirror
 
         /// UNITYSTATION CODE /// Faster than looping through observing
         public int EmptyIndex = 0;
-        public NetworkIdentity[] DirtyObserving = new NetworkIdentity[1000];
+        public NetworkIdentity[] DirtyObserving = new NetworkIdentity[10];
 
         /// <summary>All NetworkIdentities owned by this connection. Can be main player, pets, etc.</summary>
         // IMPORTANT: this needs to be <NetworkIdentity>, not <uint netId>.
