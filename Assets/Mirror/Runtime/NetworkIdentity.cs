@@ -47,25 +47,19 @@ namespace Mirror
         {
             set
             {
-                if (_isDirty == false)
+                if (_isDirty == false && value)
                 {
-                    if (value)
+
+                    if (observers != null)
                     {
-                        if (observers != null)
+                        foreach (var Observer in observers)
                         {
-                            foreach (var Observer in observers)
-                            {
-                                Observer.Value.AddDirty(this);
-                            }
+                            Observer.Value.AddDirty(this);
                         }
                     }
 
-                    _isDirty = value;
                 }
-                else
-                {
-                    _isDirty = value;
-                }
+                _isDirty = value;
             }
             get
             {

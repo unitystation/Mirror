@@ -1645,12 +1645,9 @@ namespace Mirror
                 // if (identity.isDirty || identity.lastSerialization.tick == FrameCountCash) //This is thread safe because is dirty gets set false after IsSameLastSerializationTick is set, So it should never be reading it while it's getting change
                 // {
 
-                    // get serialization for this entity viewed by this connection
-                    // (if anything was serialized this time)
-                    if (identity == null)
-                    {
-                        Debug.LogError("oh no!");
-                    }
+                // get serialization for this entity viewed by this connection
+                // (if anything was serialized this time)
+
 
                 NetworkWriter serialization = GetEntitySerializationForConnection(identity, connection);
 
