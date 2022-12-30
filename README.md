@@ -1,19 +1,14 @@
 ![mMirror Logo](https://user-images.githubusercontent.com/16416509/119120944-6db26780-ba5f-11eb-9cdd-fc8500207f4d.png)
 
-[![Download](https://img.shields.io/badge/asset_store-brightgreen.svg)](https://assetstore.unity.com/packages/tools/network/mirror-129321)
-[![Documentation](https://img.shields.io/badge/docs-brightgreen.svg)](https://mirror-networking.gitbook.io/)
-[![Showcase](https://img.shields.io/badge/showcase-brightgreen.svg)](https://mirror-networking.com/showcase/)
-[![Video Tutorials](https://img.shields.io/badge/video_tutorial-brightgreen.svg)](https://mirror-networking.gitbook.io/docs/community-guides/video-tutorials)
-[![Forum](https://img.shields.io/badge/forum-brightgreen.svg)](https://forum.unity.com/threads/mirror-networking-for-unity-aka-hlapi-community-edition.425437/)
-[![Build](https://img.shields.io/appveyor/ci/vis2k73562/hlapi-community-edition/Mirror.svg)](https://ci.appveyor.com/project/vis2k73562/hlapi-community-edition/branch/mirror)
-[![Discord](https://img.shields.io/discord/343440455738064897.svg)](https://discordapp.com/invite/N9QVxbM)
-[![release](https://img.shields.io/github/release/vis2k/Mirror.svg)](https://github.com/vis2k/Mirror/releases/latest)
-[![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://github.com/vis2k/Mirror/blob/master/LICENSE)
-[![Roadmap](https://img.shields.io/badge/roadmap-blue.svg)](https://trello.com/b/fgAE7Tud)
 
-**It's only the dreamers who ever move mountains.**
+HOW TO UPDATE FOR Unitystation,
+Bump the version number in
+Mirror\Assets\Mirror\package.json
 
-<img src="https://user-images.githubusercontent.com/16416509/119117854-3e4e2b80-ba5c-11eb-8236-ce6cfd2b6b07.png" title="Original Concept Art for Games that made us dream. Copyright Blizzard, Blizzard, Riot Games, Joymax in that order."/>
+Then go to the main project and
+unitystation\UnityProject\Packages\packages-lock.json
+go to "org.unitystation.spacemirror": and And delete the hash In the hash field
+And it should grab the most up-to-date version
 
 ## Mirror
 Mirror is a **high level** Networking library for **Unity 2019/2020 LTS**, compatible with different **low level** [Transports](https://github.com/vis2k/Mirror#low-level-transports).
