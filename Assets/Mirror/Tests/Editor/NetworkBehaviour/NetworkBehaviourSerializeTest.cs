@@ -134,6 +134,7 @@ namespace Mirror.Tests.NetworkBehaviours
                     target.OnDeserialize(reader, initialState);
                 }
             }
+            writer.Recycle();
         }
 
         [SetUp]

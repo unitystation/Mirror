@@ -69,7 +69,7 @@ namespace Mirror
                     {
                         NetworkClient.OnTransportData(batchWriter.ToArraySegment(), Channels.Reliable);
                     }
-                }
+                    batchWriter.Recycle();
 
                 NetworkWriterPool.Return(writer);
             }

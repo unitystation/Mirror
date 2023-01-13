@@ -422,6 +422,7 @@ namespace Mirror.Tests.SyncCollections
 
                 using (NetworkReaderPooled reader = NetworkReaderPool.Get(writer.ToArraySegment()))
                 {
+                    writer.Recycle();
                     return reader.ReadUInt();
                 }
             }

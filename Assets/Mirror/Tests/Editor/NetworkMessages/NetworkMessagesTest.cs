@@ -1,6 +1,7 @@
 using System;
 using NUnit.Framework;
 using UnityEngine;
+using WeaverGeneralTests.TestingScriptableObjectArraySerialization;
 
 namespace Mirror.Tests.NetworkMessagesTests
 {

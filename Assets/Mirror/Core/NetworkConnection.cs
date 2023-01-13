@@ -116,7 +116,7 @@ namespace Mirror
                 // send allocation free
                 NetworkDiagnostics.OnSend(message, channelId, writer.Position, 1);
                 Send(writer.ToArraySegment(), channelId);
-            }
+                writer.Recycle();
         }
 
         // Send stage two: serialized NetworkMessage as ArraySegment<byte>
@@ -175,7 +175,7 @@ namespace Mirror
                         // reset writer for each new batch
                         writer.Position = 0;
                     }
-                }
+                    writer.Recycle();
             }
         }
 

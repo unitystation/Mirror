@@ -555,6 +555,7 @@ namespace Mirror
 
                 NetworkDiagnostics.OnSend(message, channelId, segment.Count, count);
             }
+            writer.Recycle();
         }
 
         /// <summary>Send a message to all clients which have joined the world (are ready).</summary>
@@ -605,6 +606,7 @@ namespace Mirror
 
                 NetworkDiagnostics.OnSend(message, channelId, segment.Count, identity.observers.Count);
             }
+            writer.Recycle();
         }
 
         /// <summary>Send a message to only clients which are ready with option to include the owner of the object identity</summary>
@@ -647,6 +649,7 @@ namespace Mirror
 
                 NetworkDiagnostics.OnSend(message, channelId, segment.Count, count);
             }
+            writer.Recycle();
         }
 
         /// <summary>Send a message to only clients which are ready including the owner of the NetworkIdentity</summary>

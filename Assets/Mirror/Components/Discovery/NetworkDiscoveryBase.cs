@@ -247,7 +247,7 @@ namespace Mirror.Discovery
                 {
                     Debug.LogException(ex, this);
                 }
-            }
+                writer.Recycle();
         }
 
         /// <summary>
@@ -424,7 +424,7 @@ namespace Mirror.Discovery
                 {
                     // It is ok if we can't broadcast to one of the addresses
                 }
-            }
+                writer.Recycle();
         }
 
         /// <summary>

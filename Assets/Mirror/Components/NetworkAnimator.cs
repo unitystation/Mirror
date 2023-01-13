@@ -117,6 +117,7 @@ namespace Mirror
                     WriteParameters(writer);
                     SendAnimationMessage(stateHash, normalizedTime, i, layerWeight[i], writer.ToArray());
                 }
+                writer.Recycle();
             }
 
             CheckSpeed();
@@ -204,6 +205,7 @@ namespace Mirror
                     if (WriteParameters(writer))
                         SendAnimationParametersMessage(writer.ToArray());
                 }
+                writer.Recycle();
             }
         }
 
