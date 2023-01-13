@@ -2,6 +2,7 @@ using System;
 using Mirror.Tests.MessageTests;
 using NUnit.Framework;
 using UnityEngine;
+using WeaverGeneralTests.TestingScriptableObjectArraySerialization;
 
 namespace Mirror.Tests
 {
@@ -14,10 +15,12 @@ namespace Mirror.Tests
         public static byte[] PackToByteArray<T>(T message)
             where T : struct, NetworkMessage
         {
-            using (PooledNetworkWriter writer = NetworkWriterPool.GetWriter())
+            PooledNetworkWriter writer = NetworkWriterPool.GetWriter();
             {
                 MessagePacking.Pack(message, writer);
-                return writer.ToArray();
+                byte[] data = writer.ToArray();
+                writer.Recycle();
+                return data;
             }
         }
 

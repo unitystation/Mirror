@@ -37,15 +37,15 @@ namespace Mirror
 
             // flush it to the server's OnTransportData immediately.
             // local connection to server always invokes immediately.
-            using (PooledNetworkWriter writer = NetworkWriterPool.GetWriter())
-            {
+            PooledNetworkWriter writer = NetworkWriterPool.GetWriter();
+
                 // make a batch with our local time (double precision)
                 if (batcher.MakeNextBatch(writer, NetworkTime.localTime))
                 {
                     NetworkServer.OnTransportData(connectionId, writer.ToArraySegment(), channelId);
                 }
                 else Debug.LogError("Local connection failed to make batch. This should never happen.");
-            }
+                writer.Recycle();
         }
 
         internal override void Update()
@@ -71,14 +71,14 @@ namespace Mirror
                 Batcher batcher = GetBatchForChannelId(Channels.Reliable);
                 batcher.AddMessage(message);
 
-                using (PooledNetworkWriter batchWriter = NetworkWriterPool.GetWriter())
-                {
+                PooledNetworkWriter batchWriter = NetworkWriterPool.GetWriter();
+
                     // make a batch with our local time (double precision)
                     if (batcher.MakeNextBatch(batchWriter, NetworkTime.localTime))
                     {
                         NetworkClient.OnTransportData(batchWriter.ToArraySegment(), Channels.Reliable);
                     }
-                }
+                    batchWriter.Recycle();
 
                 NetworkWriterPool.Recycle(writer);
             }

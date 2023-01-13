@@ -106,11 +106,12 @@ namespace Mirror
                     continue;
                 }
 
-                using (PooledNetworkWriter writer = NetworkWriterPool.GetWriter())
+                PooledNetworkWriter writer = NetworkWriterPool.GetWriter();
                 {
                     WriteParameters(writer);
                     SendAnimationMessage(stateHash, normalizedTime, i, layerWeight[i], writer.ToArray());
                 }
+                writer.Recycle();
             }
 
             CheckSpeed();
@@ -193,11 +194,12 @@ namespace Mirror
             {
                 nextSendTime = now + syncInterval;
 
-                using (PooledNetworkWriter writer = NetworkWriterPool.GetWriter())
+                PooledNetworkWriter writer = NetworkWriterPool.GetWriter();
                 {
                     if (WriteParameters(writer))
                         SendAnimationParametersMessage(writer.ToArray());
                 }
+                writer.Recycle();
             }
         }
 

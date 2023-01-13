@@ -125,7 +125,7 @@ namespace Mirror.Tests.NetworkBehaviourSerialize
     {
         static void SyncNetworkBehaviour(NetworkBehaviour source, NetworkBehaviour target, bool initialState)
         {
-            using (PooledNetworkWriter writer = NetworkWriterPool.GetWriter())
+            PooledNetworkWriter writer = NetworkWriterPool.GetWriter();
             {
                 source.OnSerialize(writer, initialState);
 
@@ -134,6 +134,7 @@ namespace Mirror.Tests.NetworkBehaviourSerialize
                     target.OnDeserialize(reader, initialState);
                 }
             }
+            writer.Recycle();
         }
 
         [SetUp]

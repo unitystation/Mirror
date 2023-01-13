@@ -302,7 +302,7 @@ namespace Mirror
             }
 
             // Debug.Log($"Server.SendToAll {typeof(T)}");
-            using (PooledNetworkWriter writer = NetworkWriterPool.GetWriter())
+            PooledNetworkWriter writer = NetworkWriterPool.GetWriter();
             {
                 // pack message only once
                 MessagePacking.Pack(message, writer);
@@ -323,6 +323,7 @@ namespace Mirror
 
                 NetworkDiagnostics.OnSend(message, channelId, segment.Count, count);
             }
+            writer.Recycle();
         }
 
         /// <summary>Send a message to all clients which have joined the world (are ready).</summary>
@@ -348,7 +349,7 @@ namespace Mirror
             if (identity == null || identity.observers == null || identity.observers.Count == 0)
                 return;
 
-            using (PooledNetworkWriter writer = NetworkWriterPool.GetWriter())
+            PooledNetworkWriter writer = NetworkWriterPool.GetWriter();
             {
                 // pack message into byte[] once
                 MessagePacking.Pack(message, writer);
@@ -361,6 +362,7 @@ namespace Mirror
 
                 NetworkDiagnostics.OnSend(message, channelId, segment.Count, identity.observers.Count);
             }
+            writer.Recycle();
         }
 
         /// <summary>Send a message to only clients which are ready with option to include the owner of the object identity</summary>
@@ -372,7 +374,7 @@ namespace Mirror
             if (identity == null || identity.observers == null || identity.observers.Count == 0)
                 return;
 
-            using (PooledNetworkWriter writer = NetworkWriterPool.GetWriter())
+            PooledNetworkWriter writer = NetworkWriterPool.GetWriter();
             {
                 // pack message only once
                 MessagePacking.Pack(message, writer);
@@ -391,6 +393,7 @@ namespace Mirror
 
                 NetworkDiagnostics.OnSend(message, channelId, segment.Count, count);
             }
+            writer.Recycle();
         }
 
         // Deprecated 2021-09-19
@@ -1014,7 +1017,8 @@ namespace Mirror
             //Debug.Log($"Server SendSpawnMessage: name:{identity.name} sceneId:{identity.sceneId:X} netid:{identity.netId}");
 
             // one writer for owner, one for observers
-            using (PooledNetworkWriter ownerWriter = NetworkWriterPool.GetWriter(), observersWriter = NetworkWriterPool.GetWriter())
+            PooledNetworkWriter ownerWriter = NetworkWriterPool.GetWriter(),
+                observersWriter = NetworkWriterPool.GetWriter();
             {
                 bool isOwner = identity.connectionToClient == conn;
                 ArraySegment<byte> payload = CreateSpawnMessagePayload(isOwner, identity, ownerWriter, observersWriter);
@@ -1033,6 +1037,8 @@ namespace Mirror
                 };
                 conn.Send(message);
             }
+            ownerWriter.Recycle();
+            observersWriter.Recycle();
         }
 
         internal static void SendChangeOwnerMessage(NetworkIdentity identity, NetworkConnectionToClient conn)

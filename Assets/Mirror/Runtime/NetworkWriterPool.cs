@@ -7,9 +7,12 @@ using System.Threading;
 namespace Mirror
 {
     /// <summary>Pooled NetworkWriter, automatically returned to pool when using 'using'</summary>
-    public sealed class PooledNetworkWriter : NetworkWriter, IDisposable
+    public sealed class PooledNetworkWriter : NetworkWriter
     {
-        public void Dispose() => NetworkWriterPool.Recycle(this);
+        public void Recycle()
+        {
+            NetworkWriterPool.Recycle(this);
+        }
     }
 
     /// <summary>Pool of NetworkWriters to avoid allocations.</summary>
