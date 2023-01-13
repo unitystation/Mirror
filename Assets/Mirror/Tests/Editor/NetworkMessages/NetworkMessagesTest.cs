@@ -1,24 +1,26 @@
 using System;
+using Mirror.Tests.MessageTests;
 using NUnit.Framework;
 using UnityEngine;
+using WeaverGeneralTests.TestingScriptableObjectArraySerialization;
 
-namespace Mirror.Tests.NetworkMessagesTests
+namespace Mirror.Tests
 {
     [TestFixture]
-    public class NetworkMessagesTest
+    public class MessagePackingTest
     {
-        public struct EmptyMessage : NetworkMessage
-        {
-        }
+        public struct EmptyMessage : NetworkMessage {}
 
         // helper function to pack message into a simple byte[]
         public static byte[] PackToByteArray<T>(T message)
             where T : struct, NetworkMessage
         {
-            using (NetworkWriterPooled writer = NetworkWriterPool.Get())
+            PooledNetworkWriter writer = NetworkWriterPool.GetWriter();
             {
-                NetworkMessages.Pack(message, writer);
-                return writer.ToArray();
+                MessagePacking.Pack(message, writer);
+                byte[] data = writer.ToArray();
+                writer.Recycle();
+                return data;
             }
         }
 
@@ -26,9 +28,9 @@ namespace Mirror.Tests.NetworkMessagesTests
         public static T UnpackFromByteArray<T>(byte[] data)
             where T : struct, NetworkMessage
         {
-            using (NetworkReaderPooled networkReader = NetworkReaderPool.Get(data))
+            using (PooledNetworkReader networkReader = NetworkReaderPool.GetReader(data))
             {
-                int msgType = NetworkMessageId<T>.Id;
+                int msgType = MessagePacking.GetId<T>();
 
                 int id = networkReader.ReadUShort();
                 if (id != msgType)
@@ -45,13 +47,17 @@ namespace Mirror.Tests.NetworkMessagesTests
         {
             // "Mirror.Tests.MessageTests.TestMessage"
             Debug.Log(typeof(TestMessage).FullName);
-            Assert.That(NetworkMessageId<TestMessage>.Id, Is.EqualTo(28872));
+            Assert.That(MessagePacking.GetId<TestMessage>(), Is.EqualTo(0x8706));
         }
 
         [Test]
         public void TestPacking()
         {
-            TestMessage message = new TestMessage() {IntValue = 42, StringValue = "Hello world"};
+            TestMessage message = new TestMessage()
+            {
+                IntValue = 42,
+                StringValue = "Hello world"
+            };
 
             byte[] data = PackToByteArray(message);
 
@@ -80,7 +86,11 @@ namespace Mirror.Tests.NetworkMessagesTests
             // Unpack<T> has a id != msgType case that throws a FormatException.
             // let's try to trigger it.
 
-            TestMessage message = new TestMessage() {IntValue = 42, StringValue = "Hello world"};
+            TestMessage message = new TestMessage()
+            {
+                IntValue = 42,
+                StringValue = "Hello world"
+            };
 
             byte[] data = PackToByteArray(message);
 
@@ -98,12 +108,16 @@ namespace Mirror.Tests.NetworkMessagesTests
         public void TestUnpackMessageNonGeneric()
         {
             // try a regular message
-            TestMessage message = new TestMessage() {IntValue = 42, StringValue = "Hello world"};
+            TestMessage message = new TestMessage()
+            {
+                IntValue = 42,
+                StringValue = "Hello world"
+            };
 
             byte[] data = PackToByteArray(message);
             NetworkReader reader = new NetworkReader(data);
 
-            bool result = NetworkMessages.UnpackId(reader, out ushort msgType);
+            bool result = MessagePacking.Unpack(reader, out ushort msgType);
             Assert.That(result, Is.EqualTo(true));
             Assert.That(msgType, Is.EqualTo(BitConverter.ToUInt16(data, 0)));
         }
@@ -113,7 +127,7 @@ namespace Mirror.Tests.NetworkMessagesTests
         {
             // try an invalid message
             NetworkReader reader2 = new NetworkReader(new byte[0]);
-            bool result2 = NetworkMessages.UnpackId(reader2, out ushort msgType2);
+            bool result2 = MessagePacking.Unpack(reader2, out ushort msgType2);
             Assert.That(result2, Is.EqualTo(false));
             Assert.That(msgType2, Is.EqualTo(0));
         }
@@ -122,11 +136,11 @@ namespace Mirror.Tests.NetworkMessagesTests
         public void MessageIdIsCorrectLength()
         {
             NetworkWriter writer = new NetworkWriter();
-            NetworkMessages.Pack(new EmptyMessage(), writer);
+            MessagePacking.Pack(new EmptyMessage(), writer);
 
             ArraySegment<byte> segment = writer.ToArraySegment();
 
-            Assert.That(segment.Count, Is.EqualTo(NetworkMessages.IdSize), "Empty message should have same size as HeaderSize");
+            Assert.That(segment.Count, Is.EqualTo(MessagePacking.HeaderSize), "Empty message should have same size as HeaderSize");
         }
     }
 }

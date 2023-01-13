@@ -2,7 +2,7 @@ using NUnit.Framework;
 using UnityEngine;
 
 // Note: Weaver doesn't run on nested class so use namespace to group classes instead
-namespace Mirror.Tests.NetworkBehaviours
+namespace Mirror.Tests.NetworkBehaviourSerialize
 {
     #region No OnSerialize/OnDeserialize override
     abstract class AbstractBehaviour : NetworkBehaviour
@@ -71,10 +71,10 @@ namespace Mirror.Tests.NetworkBehaviours
 
         public float customSerializeField;
 
-        public override void OnSerialize(NetworkWriter writer, bool initialState)
+        public override bool OnSerialize(NetworkWriter writer, bool initialState)
         {
             writer.WriteFloat(customSerializeField);
-            base.OnSerialize(writer, initialState);
+            return base.OnSerialize(writer, initialState);
         }
         public override void OnDeserialize(NetworkReader reader, bool initialState)
         {
@@ -87,10 +87,10 @@ namespace Mirror.Tests.NetworkBehaviours
     {
         public float customSerializeField;
 
-        public override void OnSerialize(NetworkWriter writer, bool initialState)
+        public override bool OnSerialize(NetworkWriter writer, bool initialState)
         {
             writer.WriteFloat(customSerializeField);
-            base.OnSerialize(writer, initialState);
+            return base.OnSerialize(writer, initialState);
         }
         public override void OnDeserialize(NetworkReader reader, bool initialState)
         {
@@ -108,10 +108,10 @@ namespace Mirror.Tests.NetworkBehaviours
 
         public float customSerializeField;
 
-        public override void OnSerialize(NetworkWriter writer, bool initialState)
+        public override bool OnSerialize(NetworkWriter writer, bool initialState)
         {
             writer.WriteFloat(customSerializeField);
-            base.OnSerialize(writer, initialState);
+            return base.OnSerialize(writer, initialState);
         }
         public override void OnDeserialize(NetworkReader reader, bool initialState)
         {
@@ -123,17 +123,18 @@ namespace Mirror.Tests.NetworkBehaviours
 
     public class NetworkBehaviourSerializeTest : MirrorEditModeTest
     {
-        public static void SyncNetworkBehaviour(NetworkBehaviour source, NetworkBehaviour target, bool initialState)
+        static void SyncNetworkBehaviour(NetworkBehaviour source, NetworkBehaviour target, bool initialState)
         {
-            using (NetworkWriterPooled writer = NetworkWriterPool.Get())
+            PooledNetworkWriter writer = NetworkWriterPool.GetWriter();
             {
                 source.OnSerialize(writer, initialState);
 
-                using (NetworkReaderPooled reader = NetworkReaderPool.Get(writer.ToArraySegment()))
+                using (PooledNetworkReader reader = NetworkReaderPool.GetReader(writer.ToArraySegment()))
                 {
                     target.OnDeserialize(reader, initialState);
                 }
             }
+            writer.Recycle();
         }
 
         [SetUp]
