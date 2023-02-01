@@ -241,6 +241,8 @@ namespace Mirror
             connectState = ConnectState.Disconnecting;
             ready = false;
 
+            Debug.LogError(" disconnect called on network client ");
+
             // call Disconnect on the NetworkConnection
             connection?.Disconnect();
 
