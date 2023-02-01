@@ -488,6 +488,7 @@ namespace Mirror
         {
             if (localConnection != null)
             {
+                Debug.LogError("RemoveLocalConnection Disconnect();");
                 localConnection.Disconnect();
                 localConnection = null;
             }
@@ -730,7 +731,7 @@ namespace Mirror
                     // otherwise it would overlap into the next message.
                     // => need to warn and disconnect to avoid undefined behaviour.
                     // => WARNING, not error. can happen if attacker sends random data.
-                    Debug.LogWarning($"Unknown message id: {msgType} for connection: {connection}. This can happen if no handler was registered for this message.");
+                    Debug.LogError($"Unknown message id: {msgType} for connection: {connection}. This can happen if no handler was registered for this message.");
                     // simply return false. caller is responsible for disconnecting.
                     //connection.Disconnect();
                     return false;
@@ -739,7 +740,7 @@ namespace Mirror
             else
             {
                 // => WARNING, not error. can happen if attacker sends random data.
-                Debug.LogWarning($"Invalid message header for connection: {connection}.");
+                Debug.LogError($"Invalid message header for connection: {connection}.");
                 // simply return false. caller is responsible for disconnecting.
                 //connection.Disconnect();
                 return false;
@@ -1000,6 +1001,7 @@ namespace Mirror
         // synchronous: handles disconnect events and cleans up fully before returning!
         public static void DisconnectAll()
         {
+            Debug.LogError("Disconnecting ALL");
             // disconnect and remove all connections.
             // we can not use foreach here because if
             //   conn.Disconnect -> Transport.ServerDisconnect calls
@@ -1013,6 +1015,7 @@ namespace Mirror
             // copy is no performance problem.
             foreach (NetworkConnectionToClient conn in connections.Values.ToList())
             {
+
                 // disconnect via connection->transport
                 conn.Disconnect();
 
