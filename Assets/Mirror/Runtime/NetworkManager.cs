@@ -596,6 +596,9 @@ namespace Mirror
             // only runs once.
             mode = NetworkManagerMode.Offline;
 
+
+            Debug.LogError("on StopClient Called , disconnecting");
+
             // shutdown client
             NetworkClient.Disconnect();
             NetworkClient.Shutdown();

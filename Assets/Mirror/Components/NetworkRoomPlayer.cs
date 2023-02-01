@@ -162,7 +162,8 @@ namespace Mirror
             {
                 // This button only shows on the Host for all players other than the Host
                 // Host and Players can't remove themselves (stop the client instead)
-                // Host can kick a Player this way.
+                // Host can kick a Player this way.#
+                Debug.LogError("Host kick Weird inbuilt Mirror thing");
                 GetComponent<NetworkIdentity>().connectionToClient.Disconnect();
             }
 

@@ -249,6 +249,7 @@ namespace Mirror
         {
             if (numPlayers >= maxConnections)
             {
+                Debug.LogError("Disconnecting connection because max players have been reached in Mirror ");
                 conn.Disconnect();
                 return;
             }
@@ -256,6 +257,7 @@ namespace Mirror
             // cannot join game in progress
             if (!IsSceneActive(RoomScene))
             {
+                Debug.LogError("Disconnecting Due to reactivity? in Mirror ");
                 conn.Disconnect();
                 return;
             }
