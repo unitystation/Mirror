@@ -572,6 +572,7 @@ namespace Mirror
 
             if (authenticator != null)
             {
+                Debug.LogError("authenticator Disconnection");
                 authenticator.OnClientAuthenticated.RemoveListener(OnClientAuthenticated);
                 authenticator.OnStopClient();
             }
@@ -586,6 +587,7 @@ namespace Mirror
                 && SceneManager.GetActiveScene().path != offlineScene)
                 SceneManager.MoveGameObjectToScene(gameObject, SceneManager.GetActiveScene());
 
+            Debug.LogError("OnStopClient!!! Disconnection");
             OnStopClient();
 
             //Debug.Log("NetworkManager StopClient");
