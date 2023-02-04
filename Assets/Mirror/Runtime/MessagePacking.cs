@@ -110,7 +110,11 @@ namespace Mirror
             catch (Exception exception)
             {
                 Debug.LogError($"Closed connection: {conn}. This can happen if the other side accidentally (or an attacker intentionally) sent invalid data. Reason: {exception}");
-                conn.Disconnect();
+                /// UNITYSTATION CODE ///
+                if (NetworkServer.spawned.First().Value.isServer) //To prevent stupid disconnect from client having an error on their end
+                {
+                    conn.Disconnect();
+                }
                 return;
             }
             finally
