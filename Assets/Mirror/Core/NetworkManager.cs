@@ -570,6 +570,8 @@ namespace Mirror
             if (mode == NetworkManagerMode.Offline)
                 return;
 
+            Debug.LogError("StopClient With stack trace " +  Environment.StackTrace);
+
             if (authenticator != null)
             {
                 Debug.LogError("authenticator Disconnection");
