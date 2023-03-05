@@ -91,7 +91,11 @@ namespace Mirror
             // disable it
             // note: NetworkIdentity.OnDisable adds itself to the
             //       spawnableObjects dictionary (only if sceneId != 0)
-            identity.gameObject.SetActive(false);
+            if (identity.DontDisableOnPrepareSceneObject == false)
+            {
+                identity.gameObject.SetActive(false);
+            }
+
 
             // safety check for prefabs with more than one NetworkIdentity
 #if UNITY_2018_2_OR_NEWER
