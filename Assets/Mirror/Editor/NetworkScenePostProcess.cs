@@ -87,11 +87,7 @@ namespace Mirror
             //
             // note: NetworkIdentity.OnDisable adds itself to the
             //       spawnableObjects dictionary (only if sceneId != 0)
-            if (identity.DontDisableOnPrepareSceneObject == false)
-            {
-                identity.gameObject.SetActive(false);
-            }
-
+            identity.gameObject.SetActive(false);
 
             // safety check for prefabs with more than one NetworkIdentity
             GameObject prefabGO = PrefabUtility.GetCorrespondingObjectFromSource(identity.gameObject);
