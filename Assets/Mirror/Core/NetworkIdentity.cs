@@ -200,6 +200,10 @@ namespace Mirror
         // the object again
         internal bool destroyCalled;
 
+
+        /// UNITYSTATION CODE ///
+        public bool DontDisableOnPrepareSceneObject = false;
+
         /// <summary>Client's network connection to the server. This is only valid for player objects on the client.</summary>
         // TODO change to NetworkConnectionToServer, but might cause some breaking
         public NetworkConnection connectionToServer { get; internal set; }
