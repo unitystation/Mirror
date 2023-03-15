@@ -263,7 +263,7 @@ namespace Mirror
                     // otherwise it would overlap into the next message.
                     // => need to warn and disconnect to avoid undefined behaviour.
                     // => WARNING, not error. can happen if attacker sends random data.
-                    Debug.LogWarning($"Unknown message id: {msgType}. This can happen if no handler was registered for this message.");
+                    Debug.LogError($"Unknown message id: {msgType}. This can happen if no handler was registered for this message.");
                     // simply return false. caller is responsible for disconnecting.
                     //connection.Disconnect();
                     return false;
@@ -272,7 +272,7 @@ namespace Mirror
             else
             {
                 // => WARNING, not error. can happen if attacker sends random data.
-                Debug.LogWarning("Invalid message header.");
+                Debug.LogError("Invalid message header.");
                 // simply return false. caller is responsible for disconnecting.
                 //connection.Disconnect();
                 return false;
@@ -1104,6 +1104,10 @@ namespace Mirror
             if (spawnHandlers.TryGetValue(message.assetId, out SpawnHandlerDelegate handler))
             {
                 GameObject obj = handler(message);
+                /// UNITYSTATION CODE ///
+                // Update the localPosition for mapped objects as they may have been moved.
+                obj.transform.localPosition = message.position; //note??
+
                 if (obj == null)
                 {
                     Debug.LogError($"Spawn Handler returned null, Handler assetId '{message.assetId}'");
@@ -1616,10 +1620,15 @@ namespace Mirror
                 // scene object.. disable it in scene instead of destroying
                 else
                 {
-                    identity.gameObject.SetActive(false);
-                    spawnableObjects[identity.sceneId] = identity;
-                    // reset for scene objects
-                    identity.Reset();
+                    /// UNITYSTATION CODE ///
+                    // Why? Because for some reason Mirror wants to treat seen objects as special.
+                    // It's better to just destroy the object so we don't get inconsistent behaviour
+                    // between something that spawned in and something that was put in the scene.
+                    GameObject.Destroy(identity.gameObject);
+                    // identity.gameObject.SetActive(false);
+                    // spawnableObjects[identity.sceneId] = identity;
+                    // // reset for scene objects
+                    // identity.Reset();
                 }
 
                 // remove from dictionary no matter how it is unspawned

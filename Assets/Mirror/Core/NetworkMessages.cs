@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 
@@ -110,7 +111,7 @@ namespace Mirror
                     if (requireAuthentication && !conn.isAuthenticated)
                     {
                         // message requires authentication, but the connection was not authenticated
-                        Debug.LogWarning($"Closing connection: {conn}. Received message {typeof(T)} that required authentication, but the user has not authenticated yet");
+                        Debug.LogError($"Closing connection: {conn}. Received message {typeof(T)} that required authentication, but the user has not authenticated yet");
                         conn.Disconnect();
                         return;
                     }
@@ -123,8 +124,15 @@ namespace Mirror
                 }
                 catch (Exception exception)
                 {
-                    Debug.LogError($"Closed connection: {conn}. This can happen if the other side accidentally (or an attacker intentionally) sent invalid data. Reason: {exception}");
-                    conn.Disconnect();
+                    /// UNITYSTATION CODE ///
+                    Debug.LogError($" error processing message Reason: {exception}");
+                    if (NetworkServer.spawned.First().Value.isServer) //To prevent stupid disconnect from client having an error on their end
+                    {
+                        Debug.LogError($"Closed connection: {conn}. This can happen if the other side accidentally (or an attacker intentionally) sent invalid data. Reason: {exception}");
+                        conn.Disconnect();
+                    }
+
+
                     return;
                 }
                 finally
@@ -142,8 +150,13 @@ namespace Mirror
                 }
                 catch (Exception e)
                 {
-                    Debug.LogError($"Disconnecting connId={conn.connectionId} to prevent exploits from an Exception in MessageHandler: {e.GetType().Name} {e.Message}\n{e.StackTrace}");
-                    conn.Disconnect();
+                    /// UNITYSTATION CODE ///
+                    Debug.LogError($" error processing message Reason: {e}");
+                    if (NetworkServer.spawned.First().Value.isServer) //To prevent stupid disconnect from client having an error on their end
+                    {
+                        Debug.LogError($"Disconnecting connId={conn.connectionId} to prevent exploits from an Exception in MessageHandler: {e.GetType().Name} {e.Message}\n{e.StackTrace}");
+                        conn.Disconnect();
+                    }
                 }
             };
 

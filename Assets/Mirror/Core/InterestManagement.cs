@@ -110,7 +110,9 @@ namespace Mirror
                 foreach (NetworkConnectionToClient conn in newObservers)
                 {
                     if (conn != null && conn.isReady)
-                        identity.observers.Add(conn.connectionId, conn);
+                        /// UNITYSTATION CODE ///
+                        // Use [] instead of Add(). TODO: explanation
+                        identity.observers[conn.connectionId] = conn;
                 }
             }
 
