@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Mirror.RemoteCalls;
 using UnityEngine;
 
@@ -9,6 +10,19 @@ namespace Mirror
     /// <summary>NetworkServer handles remote connections and has a local connection for a local client.</summary>
     public static partial class NetworkServer
     {
+
+        /// <summary>
+        /// UNITYSTATION CODE ///
+        /// The definitive list of scenes that a client connection is allowed to observe (server only).
+        /// </summary>
+        public static Dictionary<NetworkConnectionToClient, List<UnityEngine.SceneManagement.Scene>> observerSceneList
+            = new Dictionary<NetworkConnectionToClient, List<UnityEngine.SceneManagement.Scene>>();
+
+        /// <summary>
+        /// CUSTOM UNITYSTATION CODE Somewhere to put the logs from all the threads of errors
+        /// </summary>
+        public static string LogString = "";
+
         static bool initialized;
         public static int maxConnections;
 
@@ -153,6 +167,9 @@ namespace Mirror
                 // if it failed, throw an exception to early exit all Listen calls.
                 throw new Exception("NetworkServer won't start because Weaving failed or didn't run.");
             }
+            /// UNITYSTATION CODE ///
+            // Allows Mirror to play nice with Domain Reloading disabled.
+            isLoadingScene = false;
 
             // Debug.Log($"NetworkServer Created version {Version.Current}");
 
@@ -385,7 +402,7 @@ namespace Mirror
                         if (!identity.DeserializeServer(reader))
                         {
                             if (exceptionsDisconnect)
-                            { 
+                            {
                                 Debug.LogError($"Server failed to deserialize client state for {identity.name} with netId={identity.netId}, Disconnecting.");
                                 connection.Disconnect();
                             }
@@ -928,22 +945,22 @@ namespace Mirror
             where T : struct, NetworkMessage
         {
             ushort msgType = NetworkMessageId<T>.Id;
-            
+
             // register Id <> Type in lookup for debugging.
             NetworkMessages.Lookup[msgType] = typeof(T);
-            
+
             handlers[msgType] = NetworkMessages.WrapHandler(handler, requireAuthentication, exceptionsDisconnect);
         }
-        
+
         /// <summary>Replace a handler for message type T. Most should require authentication.</summary>
         public static void ReplaceHandler<T>(Action<NetworkConnectionToClient, T, int> handler, bool requireAuthentication = true)
             where T : struct, NetworkMessage
         {
             ushort msgType = NetworkMessageId<T>.Id;
-            
+
             // register Id <> Type in lookup for debugging.
             NetworkMessages.Lookup[msgType] = typeof(T);
-            
+
             handlers[msgType] = NetworkMessages.WrapHandler(handler, requireAuthentication, exceptionsDisconnect);
         }
 
@@ -1124,7 +1141,9 @@ namespace Mirror
                 // client while keeping hasAuthority true
                 SendChangeOwnerMessage(previousPlayer, conn);
             }
-            else
+            /// UNITYSTATION CODE ///
+            // Add nullcheck. TODO: explanation
+            else if (previousPlayer != null)
             {
                 // This clears both isLocalPlayer and hasAuthority on client
                 previousPlayer.RemoveClientAuthority();
@@ -1751,7 +1770,7 @@ namespace Mirror
         {
             // get serialization for this entity (cached)
             // IMPORTANT: int tick avoids floating point inaccuracy over days/weeks
-            NetworkIdentitySerialization serialization = identity.GetServerSerializationAtTick(Time.frameCount);
+            NetworkIdentitySerialization serialization = identity.GetServerSerializationAtTick(FrameCountCash);
 
             // is this entity owned by this connection?
             bool owned = identity.connectionToClient == connection;
@@ -1779,33 +1798,30 @@ namespace Mirror
         // helper function to broadcast the world to a connection
         static void BroadcastToConnection(NetworkConnectionToClient connection)
         {
-            // for each entity that this connection is seeing
-            foreach (NetworkIdentity identity in connection.observing)
+
+            var cashedEmpty = connection.EmptyIndex;
+            connection.EmptyIndex = 0;
+            for (int i = 0; i < cashedEmpty; i++)
             {
-                // make sure it's not null or destroyed.
-                // (which can happen if someone uses
-                //  GameObject.Destroy instead of
-                //  NetworkServer.Destroy)
-                if (identity != null)
+                /// UNITYSTATION CODE ///
+                // Null checks are slow: changed condition.
+                // if (identity != null)
+                var identity = connection.DirtyObserving[i];
+
+                // get serialization for this entity viewed by this connection
+                // (if anything was serialized this time)
+                NetworkWriter serialization = SerializeForConnection(identity, connection);
+                if (serialization != null)
                 {
-                    // get serialization for this entity viewed by this connection
-                    // (if anything was serialized this time)
-                    NetworkWriter serialization = SerializeForConnection(identity, connection);
-                    if (serialization != null)
+                    EntityStateMessage message = new EntityStateMessage
                     {
-                        EntityStateMessage message = new EntityStateMessage
-                        {
-                            netId = identity.netId,
-                            payload = serialization.ToArraySegment()
-                        };
-                        connection.Send(message);
-                    }
+                        netId = identity.netId,
+                        payload = serialization.ToArraySegment()
+                    };
+                    connection.Send(message);
                 }
-                // spawned list should have no null entries because we
-                // always call Remove in OnObjectDestroy everywhere.
-                // if it does have null then someone used
-                // GameObject.Destroy instead of NetworkServer.Destroy.
-                else Debug.LogWarning($"Found 'null' entry in observing list for connectionId={connection.connectionId}. Please call NetworkServer.Destroy to destroy networked objects. Don't use GameObject.Destroy.");
+
+                connection.DirtyObserving[i] = null;
             }
         }
 
@@ -1830,6 +1846,10 @@ namespace Mirror
         internal static readonly List<NetworkConnectionToClient> connectionsCopy =
             new List<NetworkConnectionToClient>();
 
+        //CUSTOM UNITYSTATION CODE// thread Safe read Time.frameCount
+        public static int FrameCountCash;
+        public static bool ApplicationIsPlayingCash;
+
         static void Broadcast()
         {
             // copy all connections into a helper collection so that
@@ -1843,36 +1863,9 @@ namespace Mirror
             connectionsCopy.Clear();
             connections.Values.CopyTo(connectionsCopy);
 
-            // go through all connections
-            foreach (NetworkConnectionToClient connection in connectionsCopy)
-            {
-                // check for inactivity. disconnects if necessary.
-                if (DisconnectIfInactive(connection))
-                    continue;
+            //CUSTOM UNITYSTATION CODE// Cashs Time.frameCount and Parallel loop instead of for loop
+            Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
 
-                // has this connection joined the world yet?
-                // for each READY connection:
-                //   pull in UpdateVarsMessage for each entity it observes
-                if (connection.isReady)
-                {
-                    // send time for snapshot interpolation every sendInterval.
-                    // BroadcastToConnection() may not send if nothing is new.
-                    //
-                    // sent over unreliable.
-                    // NetworkTime / Transform both use unreliable.
-                    //
-                    // make sure Broadcast() is only called every sendInterval,
-                    // even if targetFrameRate isn't set in host mode (!)
-                    // (done via AccurateInterval)
-                    connection.Send(new TimeSnapshotMessage(), Channels.Unreliable);
-
-                    // broadcast world state to this connection
-                    BroadcastToConnection(connection);
-                }
-
-                // update connection to flush out batched messages
-                connection.Update();
-            }
 
             // TODO this is way too slow because we iterate ALL spawned :/
             // TODO this is way too complicated :/
@@ -1897,6 +1890,49 @@ namespace Mirror
             // this was moved to NetworkIdentity.AddObserver!
             // same result, but no more O(N) loop in here!
             // TODO remove this comment after moving spawning into Broadcast()!
+        }
+
+
+        //CUSTOM UNITYSTATION CODE// Added part of Broadcast Logic
+        public static void SubConnectionBroadcast(NetworkConnectionToClient connection)
+        {
+            //CUSTOM UNITYSTATION CODE//  So we can log any errors that go on With Unity funnies with logs on Thread
+            try
+            {
+                // has this connection joined the world yet?
+                // for each READY connection:
+                //   pull in UpdateVarsMessage for each entity it observes
+                if (connection.isReady)
+                {
+                    // send time for snapshot interpolation every sendInterval.
+                    // BroadcastToConnection() may not send if nothing is new.
+                    //
+                    // sent over unreliable.
+                    // NetworkTime / Transform both use unreliable.
+                    //
+                    // make sure Broadcast() is only called every sendInterval,
+                    // even if targetFrameRate isn't set in host mode (!)
+                    // (done via AccurateInterval)
+                    connection.Send(new TimeSnapshotMessage(), Channels.Unreliable);
+
+                    // broadcast world state to this connection
+                    BroadcastToConnection(connection);
+                }
+
+                // update connection to flush out batched messages
+                connection.Update();
+
+            }
+            catch (Exception e)
+            {
+                lock (connections)
+                {
+                    LogString += "\n";
+                    LogString += e.ToString();
+                }
+                throw;
+            }
+
         }
 
         // update //////////////////////////////////////////////////////////////

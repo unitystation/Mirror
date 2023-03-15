@@ -21,17 +21,24 @@ namespace Mirror
         /// <summary>Get a writer from the pool. Creates new one if pool is empty.</summary>
         public static NetworkWriterPooled Get()
         {
-            // grab from pool & reset position
-            NetworkWriterPooled writer = Pool.Get();
-            writer.Reset();
-            return writer;
+            lock (Pool) //thread shenanigans
+            {
+                // grab from pool & reset position
+                NetworkWriterPooled writer = Pool.Get();
+                writer.Reset();
+                return writer;
+            }
+
         }
 
         /// <summary>Return a writer to the pool.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Return(NetworkWriterPooled writer)
         {
-            Pool.Return(writer);
+            lock (Pool) //thread shenanigans
+            {
+                Pool.Return(writer);
+            }
         }
     }
 }

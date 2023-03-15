@@ -12,9 +12,14 @@
 <a href="https://discordapp.com/invite/xVW4nU4C34"><img src="https://img.shields.io/discord/343440455738064897.svg?style=for-the-badge&colorA=363a4f&colorB=b7bdf8" alt="Discord"></a>
 </p>
 
-**It's only the dreamers who ever move mountains.**
+HOW TO UPDATE FOR Unitystation,
+Bump the version number in
+Mirror\Assets\Mirror\package.json
 
-<img src="https://user-images.githubusercontent.com/16416509/119117854-3e4e2b80-ba5c-11eb-8236-ce6cfd2b6b07.png" title="Original Concept Art for Games that made us dream. Copyright Blizzard, Blizzard, Riot Games, Joymax in that order."/>
+Then go to the main project and
+unitystation\UnityProject\Packages\packages-lock.json
+go to "org.unitystation.spacemirror": and And delete the hash In the hash field
+And it should grab the most up-to-date version
 
 ## Mirror Networking 
 The **#1** free **open source** game networking library for **Unity 2019 / 2020 / 2021 / 2022 LTS**.

@@ -5,6 +5,7 @@
 // however, some of the old NetworkTime code remains for ping time (rtt).
 // some users may still be using that.
 using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 #if !UNITY_2020_3_OR_NEWER

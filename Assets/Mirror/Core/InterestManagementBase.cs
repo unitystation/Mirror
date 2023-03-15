@@ -15,11 +15,19 @@ namespace Mirror
         // disabled components.
         protected virtual void OnEnable()
         {
-            // do not check if == null or error if already set.
-            // users may enabled/disable components randomly,
-            // causing this to be called multiple times.
-            NetworkServer.aoi = this;
-            NetworkClient.aoi = this;
+            if (NetworkServer.aoi == null)
+            {
+                NetworkServer.aoi = this;
+            }
+            /// UNITYSTATION CODE /// So not to upset integration test
+            else Debug.LogWarning($"Only one InterestManagement component allowed. {NetworkServer.aoi.GetType()} has been set up already.");
+
+            if (NetworkClient.aoi == null)
+            {
+                NetworkClient.aoi = this;
+            }
+            /// UNITYSTATION CODE /// So not to upset integration test
+            else Debug.LogWarning($"Only one InterestManagement component allowed. {NetworkClient.aoi.GetType()} has been set up already.");
         }
 
         [ServerCallback]
