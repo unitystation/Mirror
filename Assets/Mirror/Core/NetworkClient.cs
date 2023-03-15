@@ -463,6 +463,22 @@ namespace Mirror
             RegisterHandler<RpcBufferMessage>(OnRPCBufferMessage);
         }
 
+        /// UNITYSTATION CODE ///
+        // Adds back this obsolete method because updating the usage of it looks like a pain.
+        /// <summary>Register a handler for a message type T. Most should require authentication.</summary>
+        // Deprecated 2021-03-13
+        [Obsolete("Use RegisterHandler<T> version without NetworkConnection parameter. It always points to NetworkClient.connection anyway.")]
+        public static void RegisterHandler<T>(Action<NetworkConnection, T> handler, bool requireAuthentication = true)
+            where T : struct, NetworkMessage
+        {
+            ushort msgType = NetworkMessages.GetId<T>();
+            if (handlers.ContainsKey(msgType))
+            {
+                Debug.LogWarning($"NetworkClient.RegisterHandler replacing handler for {typeof(T).FullName}, id={msgType}. If replacement is intentional, use ReplaceHandler instead to avoid this warning.");
+            }
+            handlers[msgType] = NetworkMessages.WrapHandler(handler, requireAuthentication);
+        }
+
         /// <summary>Register a handler for a message type T. Most should require authentication.</summary>
         public static void RegisterHandler<T>(Action<T> handler, bool requireAuthentication = true)
             where T : struct, NetworkMessage
