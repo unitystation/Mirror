@@ -20,13 +20,15 @@ namespace Mirror
             {
                 NetworkServer.aoi = this;
             }
-            else Debug.LogError($"Only one InterestManagement component allowed. {NetworkServer.aoi.GetType()} has been set up already.");
+            /// UNITYSTATION CODE /// So not to upset integration test
+            else Debug.LogWarning($"Only one InterestManagement component allowed. {NetworkServer.aoi.GetType()} has been set up already.");
 
             if (NetworkClient.aoi == null)
             {
                 NetworkClient.aoi = this;
             }
-            else Debug.LogError($"Only one InterestManagement component allowed. {NetworkClient.aoi.GetType()} has been set up already.");
+            /// UNITYSTATION CODE /// So not to upset integration test
+            else Debug.LogWarning($"Only one InterestManagement component allowed. {NetworkClient.aoi.GetType()} has been set up already.");
         }
 
         [ServerCallback]

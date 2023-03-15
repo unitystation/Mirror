@@ -1,9 +1,15 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
+/**
+ * /// UNITYSTATION CODE ///
+ * This is commented out as the networked prefab list is dynamically generated at build time.
+ */
+
+/*
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Mirror
 {
@@ -179,3 +185,4 @@ namespace Mirror
         }
     }
 }
+*/

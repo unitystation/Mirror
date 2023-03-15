@@ -174,6 +174,13 @@ namespace Mirror
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetSyncVarDirtyBit(ulong dirtyBit)
         {
+            /// UNITYSTATION CODE ///
+            // Set our custom isDirty field true
+            if (netIdentity != null)
+            {
+                netIdentity.isDirty = true;
+            }
+
             syncVarDirtyBits |= dirtyBit;
         }
 
@@ -193,17 +200,24 @@ namespace Mirror
         // OR both bitmasks. != 0 if either was dirty.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool IsDirty() =>
+
+            /// UNITYSTATION CODE ///
+            // It's presumed to be dirty already since the addition of isDirty on the network component
+            //TODO Investigate putting is dirty on individual network behaviours, To reduce network usage
+            //Even down to the individual syncVar? vs Performance
+            true;
             // check bits first. this is basically free.
-            (syncVarDirtyBits | syncObjectDirtyBits) != 0UL &&
+            //(syncVarDirtyBits | syncObjectDirtyBits) != 0UL &&
             // only check time if bits were dirty. this is more expensive.
-            NetworkTime.localTime - lastSyncTime >= syncInterval;
+            //NetworkTime.localTime - lastSyncTime >= syncInterval;
 
         /// <summary>Clears all the dirty bits that were set by SetSyncVarDirtyBit() (formally SetDirtyBits)</summary>
         // automatically invoked when an update is sent for this object, but can
         // be called manually as well.
         public void ClearAllDirtyBits()
         {
-            lastSyncTime = NetworkTime.localTime;
+            /// UNITYSTATION CODE /// \/ Saves a tiny bit of performance
+            //lastSyncTime = NetworkTime.localTime;
             syncVarDirtyBits = 0L;
             syncObjectDirtyBits = 0L;
 
@@ -1248,8 +1262,10 @@ namespace Mirror
             catch (Exception e)
             {
                 // show a detailed error and let the user know what went wrong
-                Debug.LogError($"OnSerialize failed for: object={name} component={GetType()} sceneId={netIdentity.sceneId:X}\n\n{e}");
+                Debug.LogError(
+                    $"OnSerialize failed for: object component={this.GetType()} sceneId={this:X}\n\n{e}"); /// UNITYSTATION CODE /// Removed name because it would cause thread errors }
             }
+
             int endPosition = writer.Position;
 
             // fill in length hash as the last byte of the 4 byte length
@@ -1261,6 +1277,7 @@ namespace Mirror
 
             //Debug.Log($"OnSerializeSafely written for object {name} component:{GetType()} sceneId:{sceneId:X} header:{headerPosition} content:{contentPosition} end:{endPosition} contentSize:{endPosition - contentPosition}");
         }
+
 
         // correct the read size with the 1 byte length hash (by mischa).
         // -> the component most likely read a few too many/few bytes.

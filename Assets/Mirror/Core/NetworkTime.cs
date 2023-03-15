@@ -5,6 +5,7 @@
 // however, some of the old NetworkTime code remains for ping time (rtt).
 // some users may still be using that.
 using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 #if !UNITY_2020_3_OR_NEWER
@@ -41,14 +42,14 @@ namespace Mirror
             get => Time.unscaledTimeAsDouble;
         }
 #else
+
         // need stopwatch for older Unity versions, but it's quite slow.
         // CAREFUL: unlike Time.time, the stopwatch time is not a FRAME time.
         //          it changes during the frame, so we have an extra step to "cache" it in EarlyUpdate.
         static readonly Stopwatch stopwatch = new Stopwatch();
         static NetworkTime() => stopwatch.Start();
-        static double localFrameTime;
-        public static double localTime => localFrameTime;
-#endif
+        public static double localTime => stopwatch.Elapsed.TotalSeconds;
+
 
         /// <summary>The time in seconds since the server started.</summary>
         // via global NetworkClient snapshot interpolated timeline (if client).

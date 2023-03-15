@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using UnityEngine;
@@ -138,7 +139,7 @@ namespace Mirror
                     if (requireAuthentication && !conn.isAuthenticated)
                     {
                         // message requires authentication, but the connection was not authenticated
-                        Debug.LogWarning($"Disconnecting connection: {conn}. Received message {typeof(T)} that required authentication, but the user has not authenticated yet");
+                        Debug.LogError($"Closing connection: {conn}. Received message {typeof(T)} that required authentication, but the user has not authenticated yet");
                         conn.Disconnect();
                         return;
                     }
@@ -151,6 +152,14 @@ namespace Mirror
                 }
                 catch (Exception exception)
                 {
+                    /// UNITYSTATION CODE ///
+                    Debug.LogError($" error processing message Reason: {exception}");
+                    if (NetworkServer.spawned.First().Value.isServer) //To prevent stupid disconnect from client having an error on their end
+                    {
+                        Debug.LogError($"Closed connection: {conn}. This can happen if the other side accidentally (or an attacker intentionally) sent invalid data. Reason: {exception}");
+                        conn.Disconnect();
+                        return;
+                    }
                     // should we disconnect on exceptions?
                     if (exceptionsDisconnect)
                     {

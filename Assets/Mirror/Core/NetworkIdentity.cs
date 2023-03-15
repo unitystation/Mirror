@@ -40,6 +40,38 @@ namespace Mirror
     [HelpURL("https://mirror-networking.gitbook.io/docs/components/network-identity")]
     public sealed class NetworkIdentity : MonoBehaviour
     {
+
+        /// <summary>
+        /// UNITYSTATION CODE ///
+        /// it is faster to loop through isDirty vs mirror method it checks synch vars individually and loop through every observing
+        /// </summary>
+        public bool isDirty
+        {
+            set
+            {
+                if (_isDirty == false && value)
+                {
+
+                    if (observers != null)
+                    {
+                        foreach (var Observer in observers)
+                        {
+                            Observer.Value.AddDirty(this);
+                        }
+                    }
+
+                }
+                _isDirty = value;
+            }
+            get
+            {
+                return _isDirty;
+            }
+        }
+
+        /// UNITYSTATION CODE ///
+        private bool _isDirty;
+
         /// <summary>Returns true if running as a client and this object was spawned by a server.</summary>
         //
         // IMPORTANT:
@@ -312,15 +344,26 @@ namespace Mirror
         {
             if (NetworkBehaviours == null)
             {
-                Debug.LogError($"NetworkBehaviours array is null on {gameObject.name}!\n" +
-                    $"Typically this can happen when a networked object is a child of a " +
-                    $"non-networked parent that's disabled, preventing Awake on the networked object " +
-                    $"from being invoked, where the NetworkBehaviours array is initialized.", gameObject);
+                /// UNITYSTATION CODE ///
+                // Add more details to the log to identify the object.
+                Debug.LogError($"NetworkBehaviours array is null on {Utils.GetGameObjectPath(gameObject)} at position {gameObject.transform.position}!\n" +
+                               $"Typically this can happen when a networked object is a child of a " +
+                               $"non-networked parent that's disabled, preventing Awake on the networked object " +
+                               $"from being invoked, where the NetworkBehaviours array is initialized.", gameObject);
             }
             else if (NetworkBehaviours.Length > MaxNetworkBehaviours)
             {
                 Debug.LogError($"NetworkIdentity {name} has too many NetworkBehaviour components: only {MaxNetworkBehaviours} NetworkBehaviour components are allowed in order to save bandwidth.", this);
             }
+        }
+
+        /// <summary>
+        /// CUSTOM UNITYSTATION CODE ///
+        /// Manually add the player observer to this object.
+        /// </summary>
+        public void AddPlayerObserver(NetworkConnectionToClient conn)
+        {
+            AddObserver(conn);
         }
 
         // Awake is only called in Play mode.
@@ -335,7 +378,12 @@ namespace Mirror
 
             if (hasSpawned)
             {
-                Debug.LogError($"{name} has already spawned. Don't call Instantiate for NetworkIdentities that were in the scene since the beginning (aka scene objects).  Otherwise the client won't know which object to use for a SpawnSceneObject message.");
+                /// UNITYSTATION CODE ///
+                // Add more information to the log to help identify the object.
+                Debug.LogError($"{name} {(transform.parent == null ? "(no parent)" : $"in {transform.parent.name}")} " +
+                               $"at position {transform.position} has already spawned. " +
+                               $"Don't call Instantiate for NetworkIdentities that were in the scene since the beginning (aka scene objects). " +
+                               $"Otherwise the client won't know which object to use for a SpawnSceneObject message.");
                 SpawnedFromInstantiate = true;
                 Destroy(gameObject);
             }
@@ -471,7 +519,10 @@ namespace Mirror
                 // => throw an exception to cancel the build and let the user
                 //    know how to fix it!
                 if (BuildPipeline.isBuildingPlayer)
-                    throw new InvalidOperationException($"Scene {gameObject.scene.path} needs to be opened and resaved before building, because the scene object {name} has no valid sceneId yet.");
+                    /// UNITYSTATION CODE ///
+                    // Replaced with warning as it used to stop build.
+                    Debug.LogWarning($"Scene {gameObject.scene.path} needs to be opened and resaved before building, because the scene object {name} has no valid sceneId yet.");
+                    //throw new InvalidOperationException($"Scene {gameObject.scene.path} needs to be opened and resaved before building, because the scene object {name} has no valid sceneId yet.");
 
                 // if we generate the sceneId then we MUST be sure to set dirty
                 // in order to save the scene object properly. otherwise it
@@ -626,6 +677,15 @@ namespace Mirror
             {
                 // Do not add logging to this (see above)
                 NetworkServer.Destroy(gameObject);
+            }
+
+            /// UNITYSTATION CODE /// just in case if it's still there
+            if (observers != null)
+            {
+                foreach (var observer in observers)
+                {
+                    observer.Value.RemoveDirty(this);
+                }
             }
 
             if (isLocalPlayer)
@@ -1111,20 +1171,22 @@ namespace Mirror
             // (otherwise [SyncVar] changes would never be serialized in tests)
             //
             // NOTE: != instead of < because int.max+1 overflows at some point.
-            if (lastSerialization.tick != tick
-#if UNITY_EDITOR
-                || !Application.isPlaying
-#endif
-               )
+            lock (lastSerialization.observersWriter)
             {
-                // reset
-                lastSerialization.ownerWriter.Position = 0;
-                lastSerialization.observersWriter.Position = 0;
+                if (lastSerialization.tick != tick
+#if UNITY_EDITOR
+                    || NetworkServer.ApplicationIsPlayingCash == false
+#endif
+                   )
+                {
+                    // reset
+                    lastSerialization.ownerWriter.Position = 0;
+                    lastSerialization.observersWriter.Position = 0;
 
-                // serialize
-                SerializeServer(false,
-                                lastSerialization.ownerWriter,
-                                lastSerialization.observersWriter);
+                    // serialize
+                    SerializeServer(false,
+                        lastSerialization.ownerWriter,
+                        lastSerialization.observersWriter);
 
                 // set tick
                 lastSerialization.tick = tick;
@@ -1143,6 +1205,17 @@ namespace Mirror
                 // we may have generated one that was already in use.
                 return;
             }
+
+            /// UNITYSTATION CODE ///
+            // TODO: explanation
+            if (conn.identity == null)
+            {
+                Debug.LogError($"The server tried to add a disconnected player to the list of " +
+                               $"{Utils.GetGameObjectPath(gameObject)} NetworkIdentity observers");
+                return;
+            }
+
+
 
             // Debug.Log($"Added observer: {conn.address} added for {gameObject}");
 
@@ -1164,11 +1237,6 @@ namespace Mirror
             //      expensive. doing it when adding the first observer has the
             //      same result, without the O(N) iteration in Broadcast().
             //
-            // TODO remove this after moving spawning into Broadcast()!
-            if (observers.Count == 0)
-            {
-                ClearAllComponentsDirtyBits();
-            }
 
             observers[conn.connectionId] = conn;
             conn.AddToObserving(this);
@@ -1181,6 +1249,8 @@ namespace Mirror
             {
                 comp.ClearAllDirtyBits();
             }
+            /// UNITYSTATION CODE ///
+            isDirty = false;
         }
 
         // this is used when a connection is destroyed, since the "observers" property is read-only
