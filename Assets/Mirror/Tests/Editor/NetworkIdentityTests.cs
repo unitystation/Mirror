@@ -1,5 +1,4 @@
 using System;
-using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -131,10 +130,9 @@ namespace Mirror.Tests
     class SerializeTest1NetworkBehaviour : NetworkBehaviour
     {
         public int value;
-        public override bool OnSerialize(NetworkWriter writer, bool initialState)
+        public override void OnSerialize(NetworkWriter writer, bool initialState)
         {
             writer.WriteInt(value);
-            return true;
         }
         public override void OnDeserialize(NetworkReader reader, bool initialState)
         {
@@ -145,10 +143,9 @@ namespace Mirror.Tests
     class SerializeTest2NetworkBehaviour : NetworkBehaviour
     {
         public string value;
-        public override bool OnSerialize(NetworkWriter writer, bool initialState)
+        public override void OnSerialize(NetworkWriter writer, bool initialState)
         {
             writer.WriteString(value);
-            return true;
         }
         public override void OnDeserialize(NetworkReader reader, bool initialState)
         {
@@ -156,9 +153,19 @@ namespace Mirror.Tests
         }
     }
 
+    class SyncVarTest1NetworkBehaviour : NetworkBehaviour
+    {
+        [SyncVar] public int value;
+    }
+
+    class SyncVarTest2NetworkBehaviour : NetworkBehaviour
+    {
+        [SyncVar] public string value;
+    }
+
     class SerializeExceptionNetworkBehaviour : NetworkBehaviour
     {
-        public override bool OnSerialize(NetworkWriter writer, bool initialState)
+        public override void OnSerialize(NetworkWriter writer, bool initialState)
         {
             throw new Exception("some exception");
         }
@@ -171,12 +178,11 @@ namespace Mirror.Tests
     class SerializeMismatchNetworkBehaviour : NetworkBehaviour
     {
         public int value;
-        public override bool OnSerialize(NetworkWriter writer, bool initialState)
+        public override void OnSerialize(NetworkWriter writer, bool initialState)
         {
             writer.WriteInt(value);
             // one too many
             writer.WriteInt(value);
-            return true;
         }
         public override void OnDeserialize(NetworkReader reader, bool initialState)
         {
@@ -304,33 +310,11 @@ namespace Mirror.Tests
         {
             CreateNetworked(out GameObject _, out NetworkIdentity identity);
 
-            // assign a guid
-            Guid guid = new Guid(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B);
-            identity.assetId = guid;
+            // assign a assetId
+            identity.assetId = 42;
 
             // did it work?
-            Assert.That(identity.assetId, Is.EqualTo(guid));
-        }
-
-        [Test]
-        public void SetAssetId_GivesErrorIfOneExists()
-        {
-            CreateNetworked(out GameObject _, out NetworkIdentity identity);
-
-            if (identity.assetId == Guid.Empty)
-            {
-                identity.assetId = Guid.NewGuid();
-            }
-
-            Guid guid1 = identity.assetId;
-
-            // assign a guid
-            Guid guid2 = Guid.NewGuid();
-            LogAssert.Expect(LogType.Error, $"Can not Set AssetId on NetworkIdentity '{identity.name}' because it already had an assetId, current assetId '{guid1:N}', attempted new assetId '{guid2:N}'");
-            identity.assetId = guid2;
-
-            // guid was changed
-            Assert.That(identity.assetId, Is.EqualTo(guid1));
+            Assert.That(identity.assetId, Is.EqualTo(42));
         }
 
         [Test]
@@ -338,35 +322,20 @@ namespace Mirror.Tests
         {
             CreateNetworked(out GameObject _, out NetworkIdentity identity);
 
-            if (identity.assetId == Guid.Empty)
+            if (identity.assetId == 0)
             {
-                identity.assetId = Guid.NewGuid();
+                identity.assetId = 42;
             }
 
-            Guid guid1 = identity.assetId;
+            uint assetId1 = identity.assetId;
 
             // assign a guid
-            Guid guid2 = new Guid();
-            LogAssert.Expect(LogType.Error, $"Can not set AssetId to empty guid on NetworkIdentity '{identity.name}', old assetId '{guid1:N}'");
-            identity.assetId = guid2;
+            uint assetId2 = 0;
+            LogAssert.Expect(LogType.Error, $"Can not set AssetId to empty guid on NetworkIdentity '{identity.name}', old assetId '{assetId1}'");
+            identity.assetId = assetId2;
 
             // guid was NOT changed
-            Assert.That(identity.assetId, Is.EqualTo(guid1));
-        }
-
-        [Test]
-        public void SetAssetId_DoesNotGiveErrorIfBothOldAndNewAreEmpty()
-        {
-            CreateNetworked(out GameObject _, out NetworkIdentity identity);
-
-            Debug.Assert(identity.assetId == Guid.Empty, "assetId needs to be empty at the start of this test");
-            // assign a guid
-            Guid guid2 = new Guid();
-            // expect no errors
-            identity.assetId = guid2;
-
-            // guid was still empty
-            Assert.That(identity.assetId, Is.EqualTo(Guid.Empty));
+            Assert.That(identity.assetId, Is.EqualTo(assetId1));
         }
 
         [Test]
@@ -458,7 +427,7 @@ namespace Mirror.Tests
 
             // OnValidate will have been called. make sure that assetId was set
             // to 0 empty and not anything else, because this is a scene object
-            Assert.That(identity.assetId, Is.EqualTo(Guid.Empty));
+            Assert.That(identity.assetId, Is.EqualTo(0));
         }
 
         [Test]
@@ -558,7 +527,7 @@ namespace Mirror.Tests
             };
 
             // create connections
-            CreateLocalConnectionPair(out LocalConnectionToClient owner, out LocalConnectionToServer clientConnection);
+            Utils.CreateLocalConnections(out LocalConnectionToClient owner, out LocalConnectionToServer clientConnection);
             owner.isReady = true;
 
             // setup NetworkServer/Client connections so messages are handled
@@ -582,9 +551,8 @@ namespace Mirror.Tests
             // server is needed
             NetworkServer.Listen(1);
 
-            // call OnStartServer so that isServer is true
-            identity.OnStartServer();
-            Assert.That(identity.isServer, Is.True);
+            // set isServer to true
+            identity.isServer = true;
 
             // assign authority
             result = identity.AssignClientAuthority(owner);
@@ -654,91 +622,53 @@ namespace Mirror.Tests
             CreateNetworked(out GameObject _, out NetworkIdentity identity, out StartAuthorityCalledNetworkBehaviour compStart, out StopAuthorityCalledNetworkBehaviour compStop);
 
             // set authority from false to true, which should call OnStartAuthority
-            identity.hasAuthority = true;
+            identity.isOwned = true;
             identity.NotifyAuthority();
             // shouldn't be touched
-            Assert.That(identity.hasAuthority, Is.True);
+            Assert.That(identity.isOwned, Is.True);
             // start should be called
             Assert.That(compStart.called, Is.EqualTo(1));
             // stop shouldn't
             Assert.That(compStop.called, Is.EqualTo(0));
 
             // set it to true again, should do nothing because already true
-            identity.hasAuthority = true;
+            identity.isOwned = true;
             identity.NotifyAuthority();
             // shouldn't be touched
-            Assert.That(identity.hasAuthority, Is.True);
+            Assert.That(identity.isOwned, Is.True);
             // same as before
             Assert.That(compStart.called, Is.EqualTo(1));
             // same as before
             Assert.That(compStop.called, Is.EqualTo(0));
 
             // set it to false, should call OnStopAuthority
-            identity.hasAuthority = false;
+            identity.isOwned = false;
             identity.NotifyAuthority();
             // should be changed
-            Assert.That(identity.hasAuthority, Is.False);
+            Assert.That(identity.isOwned, Is.False);
             // same as before
             Assert.That(compStart.called, Is.EqualTo(1));
             // stop should be called
             Assert.That(compStop.called, Is.EqualTo(1));
 
             // set it to false again, should do nothing because already false
-            identity.hasAuthority = false;
+            identity.isOwned = false;
             identity.NotifyAuthority();
             // shouldn't be touched
-            Assert.That(identity.hasAuthority, Is.False);
+            Assert.That(identity.isOwned, Is.False);
             // same as before
             Assert.That(compStart.called, Is.EqualTo(1));
             // same as before
             Assert.That(compStop.called, Is.EqualTo(1));
         }
 
-        // OnStartServer in host mode should set isClient=true
         [Test]
-        public void OnStartServerInHostModeSetsIsClientTrue()
+        public void Spawn_HostMode_SetsIsClient()
         {
-            CreateNetworked(out GameObject _, out NetworkIdentity identity);
-
-            // call client connect so that internals are set up
-            // (it won't actually successfully connect)
-            NetworkClient.Connect("localhost");
-
-            // manually invoke transport.OnConnected so that NetworkClient.active is set to true
-            Transport.activeTransport.OnClientConnected.Invoke();
-            Assert.That(NetworkClient.active, Is.True);
-
-            // isClient needs to be true in OnStartServer if in host mode.
-            // this is a test for a bug that we fixed, where isClient was false
-            // in OnStartServer if in host mode because in host mode, we only
-            // connect the client after starting the server, hence isClient would
-            // be false in OnStartServer until way later.
-            // -> we have the workaround in OnStartServer, so let's also test to
-            //    make sure that nobody ever breaks it again
-            Assert.That(identity.isClient, Is.False);
-            identity.OnStartServer();
+            NetworkServer.Listen(1);
+            ConnectHostClientBlockingAuthenticatedAndReady();
+            CreateNetworkedAndSpawn(out GameObject _, out NetworkIdentity identity);
             Assert.That(identity.isClient, Is.True);
-        }
-
-        [Test]
-        public void CreatingNetworkBehavioursCacheShouldLogErrorForTooComponents()
-        {
-            CreateNetworked(out GameObject gameObject, out NetworkIdentity identity);
-
-            // add byte.MaxValue+1 components
-            for (int i = 0; i < byte.MaxValue + 1; ++i)
-            {
-                gameObject.AddComponent<SerializeTest1NetworkBehaviour>();
-            }
-
-            // CreateNetworked already initializes the components.
-            // let's reset and initialize again with the added ones.
-            identity.Reset();
-            identity.Awake();
-
-            // call NetworkBehaviours property to create the cache
-            LogAssert.Expect(LogType.Error, new Regex($"Only {byte.MaxValue} NetworkBehaviour components are allowed for NetworkIdentity.+"));
-            _ = identity.NetworkBehaviours;
         }
 
         [Test]
@@ -807,6 +737,7 @@ namespace Mirror.Tests
                 out StopClientCalledNetworkBehaviour comp);
 
             // call OnStopClient in identity
+            identity.OnStartClient();
             identity.OnStopClient();
             Assert.That(comp.called, Is.EqualTo(1));
         }
@@ -823,6 +754,7 @@ namespace Mirror.Tests
             // OnStopClient from being called in the second one
             // exception will log an error
             LogAssert.ignoreFailingMessages = true;
+            identity.OnStartClient();
             identity.OnStopClient();
             LogAssert.ignoreFailingMessages = false;
             Assert.That(compEx.called, Is.EqualTo(1));
@@ -865,18 +797,6 @@ namespace Mirror.Tests
             // create some connections
             NetworkConnectionToClient connection1 = new NetworkConnectionToClient(42);
             NetworkConnectionToClient connection2 = new NetworkConnectionToClient(43);
-
-            // AddObserver should return early if called before .observers was
-            // created
-            Assert.That(identity.observers, Is.Null);
-            // error log is expected
-            LogAssert.ignoreFailingMessages = true;
-            identity.AddObserver(connection1);
-            LogAssert.ignoreFailingMessages = false;
-            Assert.That(identity.observers, Is.Null);
-
-            // call OnStartServer so that observers dict is created
-            identity.OnStartServer();
 
             // call AddObservers
             identity.AddObserver(connection1);
@@ -999,7 +919,7 @@ namespace Mirror.Tests
             Assert.That(identity.netId, Is.EqualTo(0));
             Assert.That(identity.connectionToClient, Is.Null);
             Assert.That(identity.connectionToServer, Is.Null);
-            Assert.That(identity.hasAuthority, Is.False);
+            Assert.That(identity.isOwned, Is.False);
             Assert.That(identity.observers, Is.Empty);
         }
 

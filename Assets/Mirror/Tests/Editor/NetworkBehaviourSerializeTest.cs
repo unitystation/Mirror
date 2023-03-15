@@ -71,10 +71,10 @@ namespace Mirror.Tests.NetworkBehaviourSerialize
 
         public float customSerializeField;
 
-        public override bool OnSerialize(NetworkWriter writer, bool initialState)
+        public override void OnSerialize(NetworkWriter writer, bool initialState)
         {
             writer.WriteFloat(customSerializeField);
-            return base.OnSerialize(writer, initialState);
+            base.OnSerialize(writer, initialState);
         }
         public override void OnDeserialize(NetworkReader reader, bool initialState)
         {
@@ -87,10 +87,10 @@ namespace Mirror.Tests.NetworkBehaviourSerialize
     {
         public float customSerializeField;
 
-        public override bool OnSerialize(NetworkWriter writer, bool initialState)
+        public override void OnSerialize(NetworkWriter writer, bool initialState)
         {
             writer.WriteFloat(customSerializeField);
-            return base.OnSerialize(writer, initialState);
+            base.OnSerialize(writer, initialState);
         }
         public override void OnDeserialize(NetworkReader reader, bool initialState)
         {
@@ -108,10 +108,10 @@ namespace Mirror.Tests.NetworkBehaviourSerialize
 
         public float customSerializeField;
 
-        public override bool OnSerialize(NetworkWriter writer, bool initialState)
+        public override void OnSerialize(NetworkWriter writer, bool initialState)
         {
             writer.WriteFloat(customSerializeField);
-            return base.OnSerialize(writer, initialState);
+            base.OnSerialize(writer, initialState);
         }
         public override void OnDeserialize(NetworkReader reader, bool initialState)
         {
@@ -125,11 +125,11 @@ namespace Mirror.Tests.NetworkBehaviourSerialize
     {
         static void SyncNetworkBehaviour(NetworkBehaviour source, NetworkBehaviour target, bool initialState)
         {
-            using (PooledNetworkWriter writer = NetworkWriterPool.GetWriter())
+            using (NetworkWriterPooled writer = NetworkWriterPool.Get())
             {
                 source.OnSerialize(writer, initialState);
 
-                using (PooledNetworkReader reader = NetworkReaderPool.GetReader(writer.ToArraySegment()))
+                using (NetworkReaderPooled reader = NetworkReaderPool.Get(writer.ToArraySegment()))
                 {
                     target.OnDeserialize(reader, initialState);
                 }

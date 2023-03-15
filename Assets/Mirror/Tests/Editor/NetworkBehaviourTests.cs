@@ -108,9 +108,8 @@ namespace Mirror.Tests
         {
             CreateNetworked(out _, out NetworkIdentity identity, out EmptyBehaviour emptyBehaviour);
 
-            // call OnStartServer so isServer is true
-            identity.OnStartServer();
-            Assert.That(identity.isServer, Is.True);
+            // set isServer
+            identity.isServer = true;
 
             // isServerOnly should be true when isServer = true && isClient = false
             Assert.That(emptyBehaviour.isServer, Is.True);
@@ -135,7 +134,7 @@ namespace Mirror.Tests
         {
             // no authority by default
             CreateNetworked(out _, out _, out EmptyBehaviour emptyBehaviour);
-            Assert.That(emptyBehaviour.hasAuthority, Is.False);
+            Assert.That(emptyBehaviour.isOwned, Is.False);
         }
 
         [Test]
@@ -185,7 +184,7 @@ namespace Mirror.Tests
         {
             // registerdelegate is protected, but we can use
             // RegisterCommandDelegate which calls RegisterDelegate
-            int registeredHash1 = RemoteProcedureCalls.RegisterDelegate(
+            ushort registeredHash1 = RemoteProcedureCalls.RegisterDelegate(
                 typeof(NetworkBehaviourDelegateComponent),
                 nameof(NetworkBehaviourDelegateComponent.Delegate),
                 RemoteCallType.Command,
@@ -194,7 +193,7 @@ namespace Mirror.Tests
 
             // registering the exact same one should be fine. it should simply
             // do nothing.
-            int registeredHash2 = RemoteProcedureCalls.RegisterDelegate(
+            ushort registeredHash2 = RemoteProcedureCalls.RegisterDelegate(
                 typeof(NetworkBehaviourDelegateComponent),
                 nameof(NetworkBehaviourDelegateComponent.Delegate),
                 RemoteCallType.Command,
@@ -203,8 +202,8 @@ namespace Mirror.Tests
 
             // registering the same name with a different callback shouldn't
             // work
-            LogAssert.Expect(LogType.Error, $"Function {typeof(NetworkBehaviourDelegateComponent)}.{nameof(NetworkBehaviourDelegateComponent.Delegate)} and {typeof(NetworkBehaviourDelegateComponent)}.{nameof(NetworkBehaviourDelegateComponent.Delegate2)} have the same hash.  Please rename one of them");
-            int registeredHash3 = RemoteProcedureCalls.RegisterDelegate(
+            LogAssert.Expect(LogType.Error, $"Function {typeof(NetworkBehaviourDelegateComponent)}.{nameof(NetworkBehaviourDelegateComponent.Delegate)} and {typeof(NetworkBehaviourDelegateComponent)}.{nameof(NetworkBehaviourDelegateComponent.Delegate2)} have the same hash. Please rename one of them. To save bandwidth, we only use 2 bytes for the hash, which has a small chance of collisions.");
+            ushort registeredHash3 = RemoteProcedureCalls.RegisterDelegate(
                 typeof(NetworkBehaviourDelegateComponent),
                 nameof(NetworkBehaviourDelegateComponent.Delegate),
                 RemoteCallType.Command,
@@ -222,7 +221,7 @@ namespace Mirror.Tests
         {
             // registerdelegate is protected, but we can use
             // RegisterCommandDelegate which calls RegisterDelegate
-            int registeredHash = RemoteProcedureCalls.RegisterDelegate(
+            ushort registeredHash = RemoteProcedureCalls.RegisterDelegate(
                 typeof(NetworkBehaviourDelegateComponent),
                 nameof(NetworkBehaviourDelegateComponent.Delegate),
                 RemoteCallType.Command,
@@ -230,7 +229,7 @@ namespace Mirror.Tests
                 false);
 
             // get handler
-            int cmdHash = nameof(NetworkBehaviourDelegateComponent.Delegate).GetStableHashCode();
+            ushort cmdHash = (ushort)nameof(NetworkBehaviourDelegateComponent.Delegate).GetStableHashCode();
             RemoteCallDelegate func = RemoteProcedureCalls.GetDelegate(cmdHash);
             RemoteCallDelegate expected = NetworkBehaviourDelegateComponent.Delegate;
             Assert.That(func, Is.EqualTo(expected));
@@ -558,9 +557,8 @@ namespace Mirror.Tests
         {
             CreateNetworked(out GameObject gameObject, out NetworkIdentity identity, out NetworkBehaviourGetSyncVarGameObjectComponent comp);
 
-            // call OnStartServer so isServer is true
-            identity.OnStartServer();
-            Assert.That(identity.isServer, Is.True);
+            // set isServer
+            identity.isServer = true;
 
             // create a syncable GameObject
             CreateNetworked(out GameObject go, out NetworkIdentity ni);
@@ -584,9 +582,8 @@ namespace Mirror.Tests
         {
             CreateNetworked(out GameObject gameObject, out NetworkIdentity identity, out NetworkBehaviourGetSyncVarGameObjectComponent comp);
 
-            // call OnStartServer and assign netId so isServer is true
-            identity.OnStartServer();
-            Assert.That(identity.isServer, Is.True);
+            // set isServer
+            identity.isServer = true;
 
             // get it on the server. null should work fine.
             GameObject result = comp.GetSyncVarGameObjectExposed();
@@ -719,9 +716,8 @@ namespace Mirror.Tests
         {
             CreateNetworked(out GameObject _, out NetworkIdentity identity, out NetworkBehaviourGetSyncVarNetworkIdentityComponent comp);
 
-            // call OnStartServer so isServer is true
-            identity.OnStartServer();
-            Assert.That(identity.isServer, Is.True);
+            // set isServer
+            identity.isServer = true;
 
             // create a syncable GameObject
             CreateNetworked(out _, out NetworkIdentity ni);
@@ -742,9 +738,8 @@ namespace Mirror.Tests
         {
             CreateNetworked(out GameObject _, out NetworkIdentity identity, out NetworkBehaviourGetSyncVarNetworkIdentityComponent comp);
 
-            // call OnStartServer so isServer is true
-            identity.OnStartServer();
-            Assert.That(identity.isServer, Is.True);
+            // set isServer
+            identity.isServer = true;
 
             // get it on the server. null should work fine.
             NetworkIdentity result = comp.GetSyncVarNetworkIdentityExposed();
@@ -799,7 +794,12 @@ namespace Mirror.Tests
         [Test]
         public void SerializeAndDeserializeObjectsAll()
         {
+            NetworkServer.Listen(1);
+            ConnectHostClientBlockingAuthenticatedAndReady();
+
             CreateNetworked(out GameObject _, out NetworkIdentity _, out NetworkBehaviourWithSyncVarsAndCollections comp);
+
+            comp.netIdentity.isServer = true;
 
             // add values to synclist
             comp.list.Add(42);
@@ -815,7 +815,7 @@ namespace Mirror.Tests
 
             // deserialize it
             NetworkReader reader = new NetworkReader(writer.ToArray());
-            comp.DeSerializeObjectsAll(reader);
+            comp.DeserializeObjectsAll(reader);
             Assert.That(comp.list.Count, Is.EqualTo(2));
             Assert.That(comp.list[0], Is.EqualTo(42));
             Assert.That(comp.list[1], Is.EqualTo(43));
@@ -846,7 +846,7 @@ namespace Mirror.Tests
 
             // deserialize it
             NetworkReader reader = new NetworkReader(writer.ToArray());
-            comp.DeSerializeObjectsDelta(reader);
+            comp.DeserializeObjectsDelta(reader);
             Assert.That(comp.list.Count, Is.EqualTo(2));
             Assert.That(comp.list[0], Is.EqualTo(42));
             Assert.That(comp.list[1], Is.EqualTo(43));
@@ -856,6 +856,7 @@ namespace Mirror.Tests
         public void OnStopClient()
         {
             CreateNetworked(out GameObject _, out NetworkIdentity identity, out OnStopClientComponent comp);
+            identity.OnStartClient();
             identity.OnStopClient();
             Assert.That(comp.called, Is.EqualTo(1));
         }

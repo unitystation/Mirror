@@ -39,6 +39,10 @@ namespace Mirror.Discovery
         [Tooltip("Time in seconds between multi-cast messages")]
         [Range(1, 60)]
         float ActiveDiscoveryInterval = 3;
+        
+        // broadcast address needs to be configurable on iOS:
+        // https://github.com/vis2k/Mirror/pull/3255
+        public string BroadcastAddress = "";
 
         protected UdpClient serverUdpClient;
         protected UdpClient clientUdpClient;
@@ -175,7 +179,7 @@ namespace Mirror.Discovery
 
             UdpReceiveResult udpReceiveResult = await udpClient.ReceiveAsync();
 
-            using (PooledNetworkReader networkReader = NetworkReaderPool.GetReader(udpReceiveResult.Buffer))
+            using (NetworkReaderPooled networkReader = NetworkReaderPool.Get(udpReceiveResult.Buffer))
             {
                 long handshake = networkReader.ReadLong();
                 if (handshake != secretHandshake)
@@ -206,7 +210,7 @@ namespace Mirror.Discovery
             if (info == null)
                 return;
 
-            using (PooledNetworkWriter writer = NetworkWriterPool.GetWriter())
+            using (NetworkWriterPooled writer = NetworkWriterPool.Get())
             {
                 try
                 {
@@ -368,8 +372,20 @@ namespace Mirror.Discovery
             }
 
             IPEndPoint endPoint = new IPEndPoint(IPAddress.Broadcast, serverBroadcastListenPort);
+            
+            if (!string.IsNullOrWhiteSpace(BroadcastAddress))
+            {
+                try
+                {
+                    endPoint = new IPEndPoint(IPAddress.Parse(BroadcastAddress), serverBroadcastListenPort);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogException(ex);
+                }
+            }
 
-            using (PooledNetworkWriter writer = NetworkWriterPool.GetWriter())
+            using (NetworkWriterPooled writer = NetworkWriterPool.Get())
             {
                 writer.WriteLong(secretHandshake);
 
@@ -406,7 +422,7 @@ namespace Mirror.Discovery
 
             UdpReceiveResult udpReceiveResult = await udpClient.ReceiveAsync();
 
-            using (PooledNetworkReader networkReader = NetworkReaderPool.GetReader(udpReceiveResult.Buffer))
+            using (NetworkReaderPooled networkReader = NetworkReaderPool.Get(udpReceiveResult.Buffer))
             {
                 if (networkReader.ReadLong() != secretHandshake)
                     return;

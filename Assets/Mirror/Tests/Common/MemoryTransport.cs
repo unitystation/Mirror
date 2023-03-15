@@ -72,6 +72,9 @@ namespace Mirror.Tests
 
                 // add server data message with connId=1 because 0 is reserved
                 serverIncoming.Enqueue(new Message(1, EventType.Data, data));
+
+                // call event. might be null if no statistics are listening etc.
+                OnClientDataSent?.Invoke(segment, channelId);
             }
         }
         public override void ClientDisconnect()
@@ -107,15 +110,18 @@ namespace Mirror.Tests
                 {
                     case EventType.Connected:
                         Debug.Log("MemoryTransport Client Message: Connected");
-                        OnClientConnected.Invoke();
+                        // event might be null in tests if no NetworkClient is used.
+                        OnClientConnected?.Invoke();
                         break;
                     case EventType.Data:
                         Debug.Log($"MemoryTransport Client Message: Data: {BitConverter.ToString(message.data)}");
-                        OnClientDataReceived.Invoke(new ArraySegment<byte>(message.data), 0);
+                        // event might be null in tests if no NetworkClient is used.
+                        OnClientDataReceived?.Invoke(new ArraySegment<byte>(message.data), 0);
                         break;
                     case EventType.Disconnected:
                         Debug.Log("MemoryTransport Client Message: Disconnected");
-                        OnClientDisconnected.Invoke();
+                        // event might be null in tests if no NetworkClient is used.
+                        OnClientDisconnected?.Invoke();
                         break;
                 }
             }
@@ -144,6 +150,9 @@ namespace Mirror.Tests
 
                 // add client data message
                 clientIncoming.Enqueue(new Message(0, EventType.Data, data));
+
+                // call event. might be null if no statistics are listening etc.
+                OnServerDataSent?.Invoke(connectionId, segment, channelId);
             }
         }
 
@@ -191,15 +200,18 @@ namespace Mirror.Tests
                 {
                     case EventType.Connected:
                         Debug.Log("MemoryTransport Server Message: Connected");
-                        OnServerConnected.Invoke(message.connectionId);
+                        // event might be null in tests if no NetworkClient is used.
+                        OnServerConnected?.Invoke(message.connectionId);
                         break;
                     case EventType.Data:
                         Debug.Log($"MemoryTransport Server Message: Data: {BitConverter.ToString(message.data)}");
-                        OnServerDataReceived.Invoke(message.connectionId, new ArraySegment<byte>(message.data), 0);
+                        // event might be null in tests if no NetworkClient is used.
+                        OnServerDataReceived?.Invoke(message.connectionId, new ArraySegment<byte>(message.data), 0);
                         break;
                     case EventType.Disconnected:
                         Debug.Log("MemoryTransport Server Message: Disconnected");
-                        OnServerDisconnected.Invoke(message.connectionId);
+                        // event might be null in tests if no NetworkClient is used.
+                        OnServerDisconnected?.Invoke(message.connectionId);
                         break;
                 }
             }

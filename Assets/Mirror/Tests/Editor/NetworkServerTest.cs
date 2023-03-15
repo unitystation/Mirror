@@ -214,7 +214,7 @@ namespace Mirror.Tests
             NetworkServer.Listen(1);
 
             // set local connection
-            CreateLocalConnectionPair(out LocalConnectionToClient connectionToClient, out _);
+            Utils.CreateLocalConnections(out LocalConnectionToClient connectionToClient, out _);
             NetworkServer.SetLocalConnection(connectionToClient);
 
             // remove local connection
@@ -223,15 +223,15 @@ namespace Mirror.Tests
         }
 
         [Test]
-        public void LocalClientActive()
+        public void ActiveHost()
         {
             // listen
             NetworkServer.Listen(1);
-            Assert.That(NetworkServer.localClientActive, Is.False);
+            Assert.That(NetworkServer.activeHost, Is.False);
 
             // set local connection
             NetworkServer.SetLocalConnection(new LocalConnectionToClient());
-            Assert.That(NetworkServer.localClientActive, Is.True);
+            Assert.That(NetworkServer.activeHost, Is.True);
         }
 
         [Test]
@@ -335,7 +335,7 @@ namespace Mirror.Tests
                 NetworkServer.localConnection);
 
             // need to have authority for this test
-            Assert.That(player.hasAuthority, Is.True);
+            Assert.That(player.isOwned, Is.True);
 
             // destroy and ignore 'Destroy called in Edit mode' error
             LogAssert.ignoreFailingMessages = true;
@@ -398,7 +398,7 @@ namespace Mirror.Tests
             ConnectClientBlocking(out _);
 
             // send message & process
-            int max = MessagePacking.MaxContentSize;
+            int max = NetworkMessages.MaxContentSize;
             NetworkClient.Send(new VariableSizedMessage(max));
             ProcessMessages();
 
@@ -419,7 +419,7 @@ namespace Mirror.Tests
             ConnectClientBlocking(out NetworkConnectionToClient connectionToClient);
 
             // send message & process
-            int max = MessagePacking.MaxContentSize;
+            int max = NetworkMessages.MaxContentSize;
             connectionToClient.Send(new VariableSizedMessage(max));
             ProcessMessages();
 
@@ -443,7 +443,7 @@ namespace Mirror.Tests
 
             // send message & process
             int transportMax = transport.GetMaxPacketSize(Channels.Reliable);
-            int messageMax = MessagePacking.MaxContentSize;
+            int messageMax = NetworkMessages.MaxContentSize;
             LogAssert.Expect(LogType.Error, $"NetworkConnection.ValidatePacketSize: cannot send packet larger than {transportMax} bytes, was {transportMax + 1} bytes");
             NetworkClient.Send(new VariableSizedMessage(messageMax + 1));
             ProcessMessages();
@@ -466,7 +466,7 @@ namespace Mirror.Tests
 
             // send message & process
             int transportMax = transport.GetMaxPacketSize(Channels.Reliable);
-            int messageMax = MessagePacking.MaxContentSize;
+            int messageMax = NetworkMessages.MaxContentSize;
             LogAssert.Expect(LogType.Error, $"NetworkConnection.ValidatePacketSize: cannot send packet larger than {transportMax} bytes, was {transportMax + 1} bytes");
             connectionToClient.Send(new VariableSizedMessage(messageMax + 1));
             ProcessMessages();
@@ -712,7 +712,7 @@ namespace Mirror.Tests
             NetworkServer.Listen(1);
 
             // serialize a test message into an arraysegment
-            byte[] message = MessagePackingTest.PackToByteArray(new TestMessage1());
+            byte[] message = NetworkMessagesTest.PackToByteArray(new TestMessage1());
 
             // call transport.OnDataReceived with an invalid connectionId
             // an error log is expected.
@@ -837,28 +837,6 @@ namespace Mirror.Tests
             comp.TestCommand();
             ProcessMessages();
             Assert.That(comp.called, Is.EqualTo(0));
-        }
-
-        [Test]
-        public void ActivateHostSceneCallsOnStartClient()
-        {
-            // listen & connect
-            NetworkServer.Listen(1);
-            ConnectClientBlockingAuthenticatedAndReady(out _);
-
-            // spawn identity with a networkbehaviour.
-            // (needs to be in .spawned for ActivateHostScene)
-            CreateNetworkedAndSpawn(
-                out _, out NetworkIdentity serverIdentity, out OnStartClientTestNetworkBehaviour serverComp,
-                out _, out _, out _);
-
-            // ActivateHostScene calls OnStartClient for spawned objects where
-            // isClient is still false. set it to false first.
-            serverIdentity.isClient = false;
-            NetworkServer.ActivateHostScene();
-
-            // was OnStartClient called for all .spawned networkidentities?
-            Assert.That(serverComp.called, Is.EqualTo(1));
         }
 
         [Test]
@@ -1025,25 +1003,25 @@ namespace Mirror.Tests
         }
 
         [Test]
-        public void ValidateSceneObject()
+        public void IsSceneObject()
         {
             // create a gameobject and networkidentity
             CreateNetworked(out GameObject go, out NetworkIdentity identity);
             identity.sceneId = 42;
 
             // should be valid as long as it has a sceneId
-            Assert.That(NetworkServer.ValidateSceneObject(identity), Is.True);
+            Assert.That(Utils.IsSceneObject(identity), Is.True);
 
             // shouldn't be valid with 0 sceneID
             identity.sceneId = 0;
-            Assert.That(NetworkServer.ValidateSceneObject(identity), Is.False);
+            Assert.That(Utils.IsSceneObject(identity), Is.False);
             identity.sceneId = 42;
 
             // shouldn't be valid for certain hide flags
             go.hideFlags = HideFlags.NotEditable;
-            Assert.That(NetworkServer.ValidateSceneObject(identity), Is.False);
+            Assert.That(Utils.IsSceneObject(identity), Is.False);
             go.hideFlags = HideFlags.HideAndDontSave;
-            Assert.That(NetworkServer.ValidateSceneObject(identity), Is.False);
+            Assert.That(Utils.IsSceneObject(identity), Is.False);
         }
 
         [Test]
@@ -1103,11 +1081,11 @@ namespace Mirror.Tests
             go.SetActive(true);
 
             // set authority from false to true, which should call OnStartAuthority
-            identity.hasAuthority = true;
+            identity.isOwned = true;
             identity.NotifyAuthority();
 
             // shouldn't be touched
-            Assert.That(identity.hasAuthority, Is.True);
+            Assert.That(identity.isOwned, Is.True);
             // start should be called
             Assert.That(compStart.called, Is.EqualTo(1));
             // stop shouldn't
@@ -1118,7 +1096,7 @@ namespace Mirror.Tests
             Assert.That(identity.netId, Is.Zero);
 
             // should be changed
-            Assert.That(identity.hasAuthority, Is.False);
+            Assert.That(identity.isOwned, Is.False);
             // same as before
             Assert.That(compStart.called, Is.EqualTo(1));
             // stop should be called
@@ -1163,8 +1141,7 @@ namespace Mirror.Tests
             NetworkServer.SetLocalConnection(new LocalConnectionToClient());
 
             // connect a client
-            transport.ClientConnect("localhost");
-            UpdateTransport();
+            base.ConnectClientBlockingAuthenticatedAndReady(out _);
             Assert.That(NetworkServer.connections.Count, Is.EqualTo(1));
 
             // shutdown
@@ -1178,11 +1155,10 @@ namespace Mirror.Tests
             Assert.That(NetworkServer.connections.Count, Is.EqualTo(0));
             Assert.That(NetworkServer.connectionsCopy.Count, Is.EqualTo(0));
             Assert.That(NetworkServer.handlers.Count, Is.EqualTo(0));
-            Assert.That(NetworkServer.newObservers.Count, Is.EqualTo(0));
             Assert.That(NetworkServer.spawned.Count, Is.EqualTo(0));
 
             Assert.That(NetworkServer.localConnection, Is.Null);
-            Assert.That(NetworkServer.localClientActive, Is.False);
+            Assert.That(NetworkServer.activeHost, Is.False);
 
             Assert.That(NetworkServer.OnConnectedEvent, Is.Null);
             Assert.That(NetworkServer.OnDisconnectedEvent, Is.Null);
@@ -1222,7 +1198,7 @@ namespace Mirror.Tests
         [Test]
         public void HasExternalConnections_WithHostOnly()
         {
-            CreateLocalConnectionPair(out LocalConnectionToClient connectionToClient, out _);
+            Utils.CreateLocalConnections(out LocalConnectionToClient connectionToClient, out _);
 
             NetworkServer.SetLocalConnection(connectionToClient);
             NetworkServer.connections.Add(0, connectionToClient);
@@ -1236,7 +1212,7 @@ namespace Mirror.Tests
         [Test]
         public void HasExternalConnections_WithHostAndConnection()
         {
-            CreateLocalConnectionPair(out LocalConnectionToClient connectionToClient, out _);
+            Utils.CreateLocalConnections(out LocalConnectionToClient connectionToClient, out _);
 
             NetworkServer.SetLocalConnection(connectionToClient);
             NetworkServer.connections.Add(0, connectionToClient);
@@ -1314,6 +1290,90 @@ namespace Mirror.Tests
 
             // changes should be empty since we have no observers
             Assert.That(comp.list.GetChangeCount(), Is.EqualTo(0));
+        }
+
+        // test for https://github.com/vis2k/Mirror/issues/3106
+        [Test]
+        public void RemovePlayerForConnection_CallsOnStopLocalPlayer()
+        {
+            NetworkServer.Listen(1);
+            ConnectClientBlockingAuthenticatedAndReady(out NetworkConnectionToClient connectionToClient);
+
+            // spawn owned object
+            CreateNetworkedAndSpawnPlayer(
+                out _, out NetworkIdentity serverIdentity, out StopLocalPlayerCalledNetworkBehaviour serverComp,
+                out _, out NetworkIdentity clientIdentity, out StopLocalPlayerCalledNetworkBehaviour clientComp,
+                connectionToClient);
+
+            // set it to not be owned by this connection anymore
+            NetworkServer.RemovePlayerForConnection(connectionToClient, false);
+            ProcessMessages();
+
+            // should call OnStopLocalPlayer on client
+            Assert.That(clientComp.called, Is.EqualTo(1));
+        }
+
+        // test for https://github.com/vis2k/Mirror/issues/3106
+        // need to make sure OnStartLocalPlayer is only called ONCE, not TWICE.
+        [Test]
+        public void ReplacePlayerForConnection_CallsOnStartLocalPlayer()
+        {
+            NetworkServer.Listen(1);
+            ConnectClientBlockingAuthenticatedAndReady(out NetworkConnectionToClient connectionToClient);
+
+            // spawn owned object
+            CreateNetworkedAndSpawnPlayer(
+                out _, out NetworkIdentity serverPreviousIdentity, out StartLocalPlayerCalledNetworkBehaviour serverPreviousComp,
+                out _, out NetworkIdentity clientPreviousIdentity, out StartLocalPlayerCalledNetworkBehaviour clientPreviousComp,
+                connectionToClient);
+            serverPreviousIdentity.name = nameof(serverPreviousIdentity);
+            clientPreviousIdentity.name = nameof(clientPreviousIdentity);
+
+            // spawn not owned object
+            CreateNetworkedAndSpawn(
+                out _, out NetworkIdentity serverNextIdentity, out StartLocalPlayerCalledNetworkBehaviour serverNextComp,
+                out _, out NetworkIdentity clientNextIdentity, out StartLocalPlayerCalledNetworkBehaviour clientNextComp);
+            serverNextIdentity.name = nameof(serverNextIdentity);
+            clientNextIdentity.name = nameof(clientNextIdentity);
+
+            // replace connection's player from 'previous' to 'next'
+            NetworkServer.ReplacePlayerForConnection(connectionToClient, serverNextIdentity.gameObject);
+            ProcessMessages();
+
+            // should call OnStartLocalPlayer on 'next' since it became the new local player.
+            Assert.That(clientNextComp.called, Is.EqualTo(1));
+        }
+
+        // test for https://github.com/vis2k/Mirror/issues/3106
+        [Test]
+        public void ReplacePlayerForConnection_CallsOnStopLocalPlayer()
+        {
+            NetworkServer.Listen(1);
+            ConnectClientBlockingAuthenticatedAndReady(out NetworkConnectionToClient connectionToClient);
+
+            // spawn owned object
+            CreateNetworkedAndSpawnPlayer(
+                out _, out NetworkIdentity serverPreviousIdentity, out StopLocalPlayerCalledNetworkBehaviour serverPreviousComp,
+                out _, out NetworkIdentity clientPreviousIdentity, out StopLocalPlayerCalledNetworkBehaviour clientPreviousComp,
+                connectionToClient);
+            serverPreviousIdentity.name = nameof(serverPreviousIdentity);
+            clientPreviousIdentity.name = nameof(clientPreviousIdentity);
+
+            // spawn not owned object
+            CreateNetworkedAndSpawn(
+                out _, out NetworkIdentity serverNextIdentity, out StopLocalPlayerCalledNetworkBehaviour serverNextComp,
+                out _, out NetworkIdentity clientNextIdentity, out StopLocalPlayerCalledNetworkBehaviour clientNextComp);
+            serverNextIdentity.name = nameof(serverNextIdentity);
+            clientNextIdentity.name = nameof(clientNextIdentity);
+
+            // replace connection's player from 'previous' to 'next'
+            NetworkServer.ReplacePlayerForConnection(connectionToClient, serverNextIdentity.gameObject);
+            ProcessMessages();
+
+            // should call OnStopLocalPlayer on 'previous' since it's not owned anymore now.
+            // should NOT call OnStopLocalPlayer on 'next' since it just became the local player.
+            Assert.That(clientPreviousComp.called, Is.EqualTo(1));
+            Assert.That(clientNextComp.called, Is.EqualTo(0));
         }
     }
 }

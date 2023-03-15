@@ -1,3 +1,4 @@
+using System;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -5,6 +6,130 @@ namespace Mirror.Tests
 {
     public class CompressionTests
     {
+        [Test]
+        public void ScaleToLong_Scalar()
+        {
+            // origin
+            Assert.True(Compression.ScaleToLong(0, 0.1f, out long value));
+            Assert.That(value, Is.EqualTo(0));
+
+            // 10m far
+            Assert.True(Compression.ScaleToLong(10.5f, 0.1f, out value));
+            Assert.That(value, Is.EqualTo(105));
+
+            // 100m far
+            Assert.True(Compression.ScaleToLong(100.5f, 0.1f, out value));
+            Assert.That(value, Is.EqualTo(1005));
+
+            // 10km
+            Assert.True(Compression.ScaleToLong(10_000.5f, 0.1f, out value));
+            Assert.That(value, Is.EqualTo(100005));
+
+            // 1000 km
+            Assert.True(Compression.ScaleToLong(1_000_000.5f, 0.1f, out value));
+            Assert.That(value, Is.EqualTo(10000005));
+
+            // negative
+            Assert.True(Compression.ScaleToLong(-1_000_000.5f, 0.1f, out value));
+            Assert.That(value, Is.EqualTo(-10000005));
+        }
+
+        // users may try to 'disable' the scaling by setting precision = 0.
+        // this would cause null division. need to detect and throw so the user
+        // knows it needs immediate fixing.
+        [Test]
+        public void ScaleToLong_Precision_0()
+        {
+            Assert.Throws<DivideByZeroException>(() =>
+            {
+                Compression.ScaleToLong(10.5f, 0, out _);
+            });
+        }
+
+        [Test]
+        public void ScaleToLong_Scalar_OutOfRange()
+        {
+            float precision = 0.1f;
+            float largest = long.MaxValue / 0.1f;
+            float smallest = long.MinValue / 0.1f;
+
+            // larger than long.max should clamp to max and return false
+            Assert.False(Compression.ScaleToLong(largest + 1, precision, out long value));
+            Assert.That(value, Is.EqualTo(long.MaxValue));
+
+            // smaller than long.min should clamp to min and return false
+            Assert.False(Compression.ScaleToLong(smallest - 1, precision, out value));
+            Assert.That(value, Is.EqualTo(long.MinValue));
+        }
+
+        [Test]
+        public void ScaleToLong_Vector3()
+        {
+            // 0, positive, negative
+            Assert.True(Compression.ScaleToLong(new Vector3(0, 10.5f, -100.5f), 0.1f, out long x, out long y, out long z));
+            Assert.That(x, Is.EqualTo(0));
+            Assert.That(y, Is.EqualTo(105));
+            Assert.That(z, Is.EqualTo(-1005));
+        }
+
+        [Test]
+        public void ScaleToLong_Vector3_OutOfRange()
+        {
+            float precision = 0.1f;
+            float largest = long.MaxValue / 0.1f;
+            float smallest = long.MinValue / 0.1f;
+
+            // 0, largest, smallest
+            Assert.False(Compression.ScaleToLong(new Vector3(0, largest, smallest), precision, out long x, out long y, out long z));
+            Assert.That(x, Is.EqualTo(0));
+            Assert.That(y, Is.EqualTo(long.MaxValue));
+            Assert.That(z, Is.EqualTo(long.MinValue));
+        }
+
+        [Test]
+        public void ScaleToFloat()
+        {
+            // origin
+            Assert.That(Compression.ScaleToFloat(0, 0.1f), Is.EqualTo(0));
+
+            // 10m far
+            Assert.That(Compression.ScaleToFloat(105, 0.1f), Is.EqualTo(10.5f));
+
+            // 100m far
+            Assert.That(Compression.ScaleToFloat(1005, 0.1f), Is.EqualTo(100.5f));
+
+            // 10km
+            Assert.That(Compression.ScaleToFloat(100005, 0.1f), Is.EqualTo(10_000.5f));
+
+            // 1000 km
+            Assert.That(Compression.ScaleToFloat(10000005, 0.1f), Is.EqualTo(1_000_000.5f));
+
+            // negative
+            Assert.That(Compression.ScaleToFloat(-10000005, 0.1f), Is.EqualTo(-1_000_000.5f));
+        }
+
+        // users may try to 'disable' the scaling by setting precision = 0.
+        // this would cause null division. need to detect and throw so the user
+        // knows it needs immediate fixing.
+        [Test]
+        public void ScaleToFloat_Precision_0()
+        {
+            Assert.Throws<DivideByZeroException>(() =>
+            {
+                Compression.ScaleToFloat(105, 0);
+            });
+        }
+
+        [Test]
+        public void ScaleToFloat_Vector3()
+        {
+            // 0, positive, negative
+            Vector3 v = Compression.ScaleToFloat(0, 105, -1005, 0.1f);
+            Assert.That(v.x, Is.EqualTo(0));
+            Assert.That(v.y, Is.EqualTo(10.5f));
+            Assert.That(v.z, Is.EqualTo(-100.5f));
+        }
+
         [Test]
         public void LargestAbsoluteComponentIndex()
         {
@@ -184,17 +309,6 @@ namespace Mirror.Tests
         public void VarInt()
         {
             NetworkWriter writer = new NetworkWriter();
-            Compression.CompressVarUInt(writer, 0);
-            Compression.CompressVarUInt(writer, 234);
-            Compression.CompressVarUInt(writer, 2284);
-            Compression.CompressVarUInt(writer, 67821);
-            Compression.CompressVarUInt(writer, 16777210);
-            Compression.CompressVarUInt(writer, 16777219);
-            Compression.CompressVarUInt(writer, 4294967295);
-            Compression.CompressVarUInt(writer, 1099511627775);
-            Compression.CompressVarUInt(writer, 281474976710655);
-            Compression.CompressVarUInt(writer, 72057594037927935);
-            Compression.CompressVarUInt(writer, ulong.MaxValue);
 
             Compression.CompressVarInt(writer, long.MinValue);
             Compression.CompressVarInt(writer, -72057594037927935);
@@ -219,17 +333,6 @@ namespace Mirror.Tests
             Compression.CompressVarInt(writer, long.MaxValue);
 
             NetworkReader reader = new NetworkReader(writer.ToArray());
-            Assert.That(Compression.DecompressVarUInt(reader), Is.EqualTo(0));
-            Assert.That(Compression.DecompressVarUInt(reader), Is.EqualTo(234));
-            Assert.That(Compression.DecompressVarUInt(reader), Is.EqualTo(2284));
-            Assert.That(Compression.DecompressVarUInt(reader), Is.EqualTo(67821));
-            Assert.That(Compression.DecompressVarUInt(reader), Is.EqualTo(16777210));
-            Assert.That(Compression.DecompressVarUInt(reader), Is.EqualTo(16777219));
-            Assert.That(Compression.DecompressVarUInt(reader), Is.EqualTo(4294967295));
-            Assert.That(Compression.DecompressVarUInt(reader), Is.EqualTo(1099511627775));
-            Assert.That(Compression.DecompressVarUInt(reader), Is.EqualTo(281474976710655));
-            Assert.That(Compression.DecompressVarUInt(reader), Is.EqualTo(72057594037927935));
-            Assert.That(Compression.DecompressVarUInt(reader), Is.EqualTo(ulong.MaxValue));
 
             Assert.That(Compression.DecompressVarInt(reader), Is.EqualTo(long.MinValue));
             Assert.That(Compression.DecompressVarInt(reader), Is.EqualTo(-72057594037927935));
@@ -252,6 +355,36 @@ namespace Mirror.Tests
             Assert.That(Compression.DecompressVarInt(reader), Is.EqualTo(281474976710655));
             Assert.That(Compression.DecompressVarInt(reader), Is.EqualTo(72057594037927935));
             Assert.That(Compression.DecompressVarInt(reader), Is.EqualTo(long.MaxValue));
+        }
+
+        [Test]
+        public void VarUInt()
+        {
+            NetworkWriter writer = new NetworkWriter();
+            Compression.CompressVarUInt(writer, 0);
+            Compression.CompressVarUInt(writer, 234);
+            Compression.CompressVarUInt(writer, 2284);
+            Compression.CompressVarUInt(writer, 67821);
+            Compression.CompressVarUInt(writer, 16777210);
+            Compression.CompressVarUInt(writer, 16777219);
+            Compression.CompressVarUInt(writer, 4294967295);
+            Compression.CompressVarUInt(writer, 1099511627775);
+            Compression.CompressVarUInt(writer, 281474976710655);
+            Compression.CompressVarUInt(writer, 72057594037927935);
+            Compression.CompressVarUInt(writer, ulong.MaxValue);
+
+            NetworkReader reader = new NetworkReader(writer.ToArray());
+            Assert.That(Compression.DecompressVarUInt(reader), Is.EqualTo(0));
+            Assert.That(Compression.DecompressVarUInt(reader), Is.EqualTo(234));
+            Assert.That(Compression.DecompressVarUInt(reader), Is.EqualTo(2284));
+            Assert.That(Compression.DecompressVarUInt(reader), Is.EqualTo(67821));
+            Assert.That(Compression.DecompressVarUInt(reader), Is.EqualTo(16777210));
+            Assert.That(Compression.DecompressVarUInt(reader), Is.EqualTo(16777219));
+            Assert.That(Compression.DecompressVarUInt(reader), Is.EqualTo(4294967295));
+            Assert.That(Compression.DecompressVarUInt(reader), Is.EqualTo(1099511627775));
+            Assert.That(Compression.DecompressVarUInt(reader), Is.EqualTo(281474976710655));
+            Assert.That(Compression.DecompressVarUInt(reader), Is.EqualTo(72057594037927935));
+            Assert.That(Compression.DecompressVarUInt(reader), Is.EqualTo(ulong.MaxValue));
         }
     }
 }
