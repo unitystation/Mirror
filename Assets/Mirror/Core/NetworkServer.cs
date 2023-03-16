@@ -1706,6 +1706,8 @@ namespace Mirror
             connectionsCopy.Clear();
             connections.Values.CopyTo(connectionsCopy);
 
+            FrameCountCash = Time.frameCount;
+            ApplicationIsPlayingCash = Application.isPlaying;
             //CUSTOM UNITYSTATION CODE// Cashs Time.frameCount and Parallel loop instead of for loop
             Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
 
