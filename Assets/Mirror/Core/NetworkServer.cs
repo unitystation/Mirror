@@ -1799,7 +1799,8 @@ namespace Mirror
                     connection.Send(new TimeSnapshotMessage(), Channels.Unreliable);
                     //CUSTOM UNITYSTATION CODE// Cashs Time.frameCount and Parallel loop instead of for loop
                     Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
-
+                    FrameCountCash = Time.frameCount;
+                    ApplicationIsPlayingCash = Application.isPlaying;
 
                     // TODO this is way too slow because we iterate ALL spawned :/
                     // TODO this is way too complicated :/
