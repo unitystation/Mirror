@@ -51,15 +51,15 @@ namespace Mirror
             {
                 if (_isDirty == false && value)
                 {
-
-                    if (observers != null)
+                    if (observers == null || observers.Count == 0)
                     {
-                        foreach (var Observer in observers)
-                        {
-                            Observer.Value.AddDirty(this);
-                        }
+                       return;
                     }
 
+                    foreach (var Observer in observers)
+                    {
+                        Observer.Value.AddDirty(this);
+                    }
                 }
                 _isDirty = value;
             }
@@ -1173,7 +1173,7 @@ namespace Mirror
             {
                 /// UNITYSTATION CODE /// Saves a bit of performance comp.IsDirty() == True
                 comp.ClearAllDirtyBits();
-                
+
                 // if (comp.IsDirty())
                 // {
                 // comp.ClearAllDirtyBits();
@@ -1181,7 +1181,7 @@ namespace Mirror
             }
 
             /// UNITYSTATION CODE ///
-            isDirty = false;
+            _isDirty = false;
         }
 
         internal void AddObserver(NetworkConnectionToClient conn)
@@ -1237,7 +1237,7 @@ namespace Mirror
                 comp.ClearAllDirtyBits();
             }
             /// UNITYSTATION CODE ///
-            isDirty = false;
+            _isDirty = false;
         }
 
         // this is used when a connection is destroyed, since the "observers" property is read-only
