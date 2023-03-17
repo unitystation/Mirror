@@ -32,13 +32,6 @@ namespace Mirror.RemoteCalls
     /// <summary>Used to help manage remote calls for NetworkBehaviours</summary>
     public static class RemoteProcedureCalls
     {
-
-        /// UNITYSTATION CODE ///
-        // These two fields are used as checkpoints for the infinite loop tracker.
-        public static bool mirrorProcessingCMD;
-        public static Invoker mirrorLastInvoker;
-        public static NetworkMessage mirrorLastNetworkMessage;
-
         // one lookup for all remote calls.
         // allows us to easily add more remote call types without duplicating code.
         // note: do not clear those with [RuntimeInitializeOnLoad]
@@ -138,10 +131,6 @@ namespace Mirror.RemoteCalls
                 mirrorProcessingCMD = true;
                 mirrorLastInvoker = invoker;
                 // invoke function on this component
-                /// UNITYSTATION CODE ///
-                // Wrap the function invocation for the infinite loop tracker.
-                mirrorProcessingCMD = true;
-                mirrorLastInvoker = invoker;
                 invoker.function(component, reader, senderConnection);
                 mirrorProcessingCMD = false;
 
