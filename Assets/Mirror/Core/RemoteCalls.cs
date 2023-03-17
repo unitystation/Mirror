@@ -113,8 +113,6 @@ namespace Mirror.RemoteCalls
         // These two fields are used as checkpoints for the infinite loop tracker.
         public static bool mirrorProcessingCMD;
         public static Invoker mirrorLastInvoker;
-        public static NetworkMessage mirrorLastNetworkMessage;
-
 
         // InvokeCmd/Rpc Delegate can all use the same function here
         internal static bool Invoke(ushort functionHash, RemoteCallType remoteCallType, NetworkReader reader, NetworkBehaviour component, NetworkConnectionToClient senderConnection = null)
