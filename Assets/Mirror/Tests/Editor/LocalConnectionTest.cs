@@ -14,7 +14,7 @@ namespace Mirror.Tests
         {
             base.SetUp();
 
-            CreateLocalConnectionPair(out connectionToClient, out connectionToServer);
+            Utils.CreateLocalConnections(out connectionToClient, out connectionToServer);
 
             // set up server/client connections so message handling works
             NetworkClient.connection = connectionToServer;
@@ -51,8 +51,6 @@ namespace Mirror.Tests
         [Test]
         public void ServerToClient()
         {
-            Assert.That(connectionToServer.address, Is.EqualTo("localhost"));
-
             bool invoked = false;
             void Handler(TestMessage message)
             {

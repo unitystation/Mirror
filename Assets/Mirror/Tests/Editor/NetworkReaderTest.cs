@@ -1,4 +1,6 @@
+using System;
 using System.IO;
+using System.Text;
 using NUnit.Framework;
 
 namespace Mirror.Tests
@@ -60,25 +62,94 @@ namespace Mirror.Tests
         }
 
         [Test]
-        public void ReadBytesCountTooBigTest()
+        public void ReadBytes_CountTooBig()
         {
             // calling ReadBytes with a count bigger than what is in Reader
             // should throw an exception
-            byte[] bytes = { 0x00, 0x01 };
-
-            using (PooledNetworkReader reader = NetworkReaderPool.GetReader(bytes))
+            byte[] bytes = {0x00, 0x01};
+            NetworkReader reader = new NetworkReader(bytes);
+            Assert.Throws<EndOfStreamException>(() =>
             {
-                try
-                {
-                    byte[] result = reader.ReadBytes(bytes, bytes.Length + 1);
-                    // BAD: IF WE GOT HERE, THEN NO EXCEPTION WAS THROWN
-                    Assert.Fail();
-                }
-                catch (EndOfStreamException)
-                {
-                    // GOOD
-                }
-            }
+                byte[] result = reader.ReadBytes(bytes, bytes.Length + 1);
+            });
+        }
+
+        // a user might call ReadBytes(ReadInt()) without verifying size.
+        // ReadBytes behaviour with negative count needs to be clearly defined.
+        [Test]
+        public void ReadBytes_CountNegative()
+        {
+            // calling ReadBytes with a count bigger than what is in Reader
+            // should throw an exception
+            byte[] bytes = {0xFF, 0xDD, 0xCC, 0xBB, 0xAA};
+            NetworkReader reader = new NetworkReader(bytes);
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+            {
+                byte[] result = reader.ReadBytes(bytes, -1);
+            });
+        }
+
+        // a user might call ReadBytes(ReadInt()) without verifying size.
+        // ReadBytes behaviour with negative count needs to be clearly defined.
+        [Test]
+        public void ReadBytesSegment_CountNegative()
+        {
+            // calling ReadBytes with a count bigger than what is in Reader
+            // should throw an exception
+            byte[] bytes = {0xFF, 0xDD, 0xCC, 0xBB, 0xAA};
+            NetworkReader reader = new NetworkReader(bytes);
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+            {
+                ArraySegment<byte> result = reader.ReadBytesSegment(-1);
+            });
+        }
+
+        // an attacker might try to send invalid utf to throw exceptions.
+        // bytes 192, 193, and 245-255 will throw:
+        //
+        // System.Text.DecoderFallbackException : Unable to translate bytes [C0]
+        // at index 0 from specified code page to Unicode.
+        //
+        // need to ensure the code never throws. simply return "" if invalid.
+        [Test]
+        public void ReadString_InvalidUTF8()
+        {
+            byte[] data =
+            {
+                0x03, 0x00,                              // size header for 2 bytes (it's always +1)
+                0x61,                                    // "a"
+                192,                                     // invalid byte
+                0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00 // fixed size worth
+            };
+            NetworkReader reader = new NetworkReader(data);
+            Assert.Throws<DecoderFallbackException>(() =>
+            {
+                string value = reader.ReadString();
+            });
+        }
+
+        // NetworkReader.ToString actually contained a bug once.
+        // ensure this never happens again.
+        [Test]
+        public void ToStringTest()
+        {
+            // byte[] with offset and count that's smaller than total length
+            byte[] data = {0xA1, 0xB2, 0xC3, 0xD4, 0xE5};
+            ArraySegment<byte> segment = new ArraySegment<byte>(data, 1, 3);
+            NetworkReader reader = new NetworkReader(segment);
+            Assert.That(reader.ToString(), Is.EqualTo("[B2-C3-D4 @ 0/3]"));
+
+            // different position
+            reader.Position = 1;
+            Assert.That(reader.ToString(), Is.EqualTo("[B2-C3-D4 @ 1/3]"));
+
+            // byte[] with no offset and exact count
+            NetworkReader reader2 = new NetworkReader(data);
+            Assert.That(reader2.ToString(), Is.EqualTo("[A1-B2-C3-D4-E5 @ 0/5]"));
+
+            // different position
+            reader2.Position = 1;
+            Assert.That(reader2.ToString(), Is.EqualTo("[A1-B2-C3-D4-E5 @ 1/5]"));
         }
     }
 }

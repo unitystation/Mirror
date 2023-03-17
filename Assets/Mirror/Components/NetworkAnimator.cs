@@ -67,7 +67,7 @@ namespace Mirror
                         return true;
                 }
 
-                return (hasAuthority && clientAuthority);
+                return (isOwned && clientAuthority);
             }
         }
 
@@ -106,12 +106,11 @@ namespace Mirror
                     continue;
                 }
 
-                PooledNetworkWriter writer = NetworkWriterPool.GetWriter();
+                using (NetworkWriterPooled writer = NetworkWriterPool.Get())
                 {
                     WriteParameters(writer);
                     SendAnimationMessage(stateHash, normalizedTime, i, layerWeight[i], writer.ToArray());
                 }
-                writer.Recycle();
             }
 
             CheckSpeed();
@@ -138,7 +137,7 @@ namespace Mirror
         {
             // skip if host or client with authority
             // they will have already set the speed so don't set again
-            if (isServer || (hasAuthority && clientAuthority))
+            if (isServer || (isOwned && clientAuthority))
                 return;
 
             animator.speed = value;
@@ -194,12 +193,11 @@ namespace Mirror
             {
                 nextSendTime = now + syncInterval;
 
-                PooledNetworkWriter writer = NetworkWriterPool.GetWriter();
+                using (NetworkWriterPooled writer = NetworkWriterPool.Get())
                 {
                     if (WriteParameters(writer))
                         SendAnimationParametersMessage(writer.ToArray());
                 }
-                writer.Recycle();
             }
         }
 
@@ -229,7 +227,7 @@ namespace Mirror
 
         void HandleAnimMsg(int stateHash, float normalizedTime, int layerId, float weight, NetworkReader reader)
         {
-            if (hasAuthority && clientAuthority)
+            if (isOwned && clientAuthority)
                 return;
 
             // usually transitions will be triggered by parameters, if not, play anims directly.
@@ -247,7 +245,7 @@ namespace Mirror
 
         void HandleAnimParamsMsg(NetworkReader reader)
         {
-            if (hasAuthority && clientAuthority)
+            if (isOwned && clientAuthority)
                 return;
 
             ReadParameters(reader);
@@ -364,15 +362,9 @@ namespace Mirror
             }
         }
 
-        /// <summary>
-        /// Custom Serialization
-        /// </summary>
-        /// <param name="writer"></param>
-        /// <param name="initialState"></param>
-        /// <returns></returns>
-        public override bool OnSerialize(NetworkWriter writer, bool initialState)
+        public override void OnSerialize(NetworkWriter writer, bool initialState)
         {
-            bool changed = base.OnSerialize(writer, initialState);
+            base.OnSerialize(writer, initialState);
             if (initialState)
             {
                 for (int i = 0; i < animator.layerCount; i++)
@@ -392,16 +384,9 @@ namespace Mirror
                     writer.WriteFloat(animator.GetLayerWeight(i));
                 }
                 WriteParameters(writer, initialState);
-                return true;
             }
-            return changed;
         }
 
-        /// <summary>
-        /// Custom Deserialization
-        /// </summary>
-        /// <param name="reader"></param>
-        /// <param name="initialState"></param>
         public override void OnDeserialize(NetworkReader reader, bool initialState)
         {
             base.OnDeserialize(reader, initialState);
@@ -443,7 +428,7 @@ namespace Mirror
                     return;
                 }
 
-                if (!hasAuthority)
+                if (!isOwned)
                 {
                     Debug.LogWarning("Only the client with authority can set animations");
                     return;
@@ -478,9 +463,7 @@ namespace Mirror
             ResetTrigger(Animator.StringToHash(triggerName));
         }
 
-        /// <summary>
-        /// Causes an animation trigger to be reset for a networked object.
-        /// </summary>
+        /// <summary>Causes an animation trigger to be reset for a networked object.</summary>
         /// <param name="hash">Hash id of trigger (from the Animator).</param>
         public void ResetTrigger(int hash)
         {
@@ -492,7 +475,7 @@ namespace Mirror
                     return;
                 }
 
-                if (!hasAuthority)
+                if (!isOwned)
                 {
                     Debug.LogWarning("Only the client with authority can reset animations");
                     return;
@@ -529,7 +512,7 @@ namespace Mirror
             //Debug.Log($"OnAnimationMessage for netId {netId}");
 
             // handle and broadcast
-            using (PooledNetworkReader networkReader = NetworkReaderPool.GetReader(parameters))
+            using (NetworkReaderPooled networkReader = NetworkReaderPool.Get(parameters))
             {
                 HandleAnimMsg(stateHash, normalizedTime, layerId, weight, networkReader);
                 RpcOnAnimationClientMessage(stateHash, normalizedTime, layerId, weight, parameters);
@@ -544,7 +527,7 @@ namespace Mirror
                 return;
 
             // handle and broadcast
-            using (PooledNetworkReader networkReader = NetworkReaderPool.GetReader(parameters))
+            using (NetworkReaderPooled networkReader = NetworkReaderPool.Get(parameters))
             {
                 HandleAnimParamsMsg(networkReader);
                 RpcOnAnimationParametersClientMessage(parameters);
@@ -560,7 +543,7 @@ namespace Mirror
 
             // handle and broadcast
             // host should have already the trigger
-            bool isHostOwner = isClient && hasAuthority;
+            bool isHostOwner = isClient && isOwned;
             if (!isHostOwner)
             {
                 HandleAnimTriggerMsg(hash);
@@ -578,7 +561,7 @@ namespace Mirror
 
             // handle and broadcast
             // host should have already the trigger
-            bool isHostOwner = isClient && hasAuthority;
+            bool isHostOwner = isClient && isOwned;
             if (!isHostOwner)
             {
                 HandleAnimResetTriggerMsg(hash);
@@ -602,14 +585,14 @@ namespace Mirror
         [ClientRpc]
         void RpcOnAnimationClientMessage(int stateHash, float normalizedTime, int layerId, float weight, byte[] parameters)
         {
-            using (PooledNetworkReader networkReader = NetworkReaderPool.GetReader(parameters))
+            using (NetworkReaderPooled networkReader = NetworkReaderPool.Get(parameters))
                 HandleAnimMsg(stateHash, normalizedTime, layerId, weight, networkReader);
         }
 
         [ClientRpc]
         void RpcOnAnimationParametersClientMessage(byte[] parameters)
         {
-            using (PooledNetworkReader networkReader = NetworkReaderPool.GetReader(parameters))
+            using (NetworkReaderPooled networkReader = NetworkReaderPool.Get(parameters))
                 HandleAnimParamsMsg(networkReader);
         }
 
@@ -617,7 +600,7 @@ namespace Mirror
         void RpcOnAnimationTriggerClientMessage(int hash)
         {
             // host/owner handles this before it is sent
-            if (isServer || (clientAuthority && hasAuthority)) return;
+            if (isServer || (clientAuthority && isOwned)) return;
 
             HandleAnimTriggerMsg(hash);
         }
@@ -626,7 +609,7 @@ namespace Mirror
         void RpcOnAnimationResetTriggerClientMessage(int hash)
         {
             // host/owner handles this before it is sent
-            if (isServer || (clientAuthority && hasAuthority)) return;
+            if (isServer || (clientAuthority && isOwned)) return;
 
             HandleAnimResetTriggerMsg(hash);
         }
