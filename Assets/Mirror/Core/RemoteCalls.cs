@@ -32,6 +32,13 @@ namespace Mirror.RemoteCalls
     /// <summary>Used to help manage remote calls for NetworkBehaviours</summary>
     public static class RemoteProcedureCalls
     {
+
+        /// UNITYSTATION CODE ///
+        // These two fields are used as checkpoints for the infinite loop tracker.
+        public static bool mirrorProcessingCMD;
+        public static Invoker mirrorLastInvoker;
+        public static NetworkMessage mirrorLastNetworkMessage;
+
         // one lookup for all remote calls.
         // allows us to easily add more remote call types without duplicating code.
         // note: do not clear those with [RuntimeInitializeOnLoad]
