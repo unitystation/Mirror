@@ -150,10 +150,6 @@ namespace Mirror.RemoteCalls
                 mirrorProcessingCMD = true;
                 mirrorLastInvoker = invoker;
                 // invoke function on this component
-                /// UNITYSTATION CODE ///
-                // Wrap the function invocation for the infinite loop tracker.
-                mirrorProcessingCMD = true;
-                mirrorLastInvoker = invoker;
                 invoker.function(component, reader, senderConnection);
                 mirrorProcessingCMD = false;
 
