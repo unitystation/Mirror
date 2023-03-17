@@ -17,7 +17,6 @@ namespace Mirror
 
         HashSet<Scene> dirtyScenes = new HashSet<Scene>();
 
-        [ServerCallback]
         public override void OnSpawned(NetworkIdentity identity)
         {
             Scene currentScene = identity.gameObject.scene;
@@ -32,15 +31,12 @@ namespace Mirror
             objects.Add(identity);
         }
 
-        [ServerCallback]
         public override void OnDestroyed(NetworkIdentity identity)
         {
-            if (lastObjectScene.TryGetValue(identity, out Scene currentScene))
-            {
-                lastObjectScene.Remove(identity);
-                if (sceneObjects.TryGetValue(currentScene, out HashSet<NetworkIdentity> objects) && objects.Remove(identity))
-                    RebuildSceneObservers(currentScene);
-            }
+            Scene currentScene = lastObjectScene[identity];
+            lastObjectScene.Remove(identity);
+            if (sceneObjects.TryGetValue(currentScene, out HashSet<NetworkIdentity> objects) && objects.Remove(identity))
+                RebuildSceneObservers(currentScene);
         }
 
         // internal so we can update from tests
@@ -53,9 +49,7 @@ namespace Mirror
             //     add new to dirty
             foreach (NetworkIdentity identity in NetworkServer.spawned.Values)
             {
-                if (!lastObjectScene.TryGetValue(identity, out Scene currentScene))
-                    continue;
-
+                Scene currentScene = lastObjectScene[identity];
                 Scene newScene = identity.gameObject.scene;
                 if (newScene == currentScene)
                     continue;
@@ -100,7 +94,7 @@ namespace Mirror
             return identity.gameObject.scene == newObserver.identity.gameObject.scene;
         }
 
-        public override void OnRebuildObservers(NetworkIdentity identity, HashSet<NetworkConnectionToClient> newObservers)
+        public override void OnRebuildObservers(NetworkIdentity identity, HashSet<NetworkConnectionToClient> newObservers, bool initialize)
         {
             if (!sceneObjects.TryGetValue(identity.gameObject.scene, out HashSet<NetworkIdentity> objects))
                 return;

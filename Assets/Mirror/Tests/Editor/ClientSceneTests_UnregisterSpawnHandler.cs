@@ -7,26 +7,26 @@ namespace Mirror.Tests.ClientSceneTests
         [Test]
         public void RemovesSpawnHandlersFromDictionary()
         {
-            NetworkClient.spawnHandlers.Add(validPrefabAssetId, new SpawnHandlerDelegate(x => null));
-            NetworkClient.UnregisterSpawnHandler(validPrefabAssetId);
-            Assert.IsFalse(NetworkClient.unspawnHandlers.ContainsKey(validPrefabAssetId));
+            NetworkClient.spawnHandlers.Add(validPrefabGuid, new SpawnHandlerDelegate(x => null));
+            NetworkClient.UnregisterSpawnHandler(validPrefabGuid);
+            Assert.IsFalse(NetworkClient.unspawnHandlers.ContainsKey(validPrefabGuid));
         }
 
         [Test]
         public void RemovesUnSpawnHandlersFromDictionary()
         {
-            NetworkClient.unspawnHandlers.Add(validPrefabAssetId, new UnSpawnDelegate(x => {}));
-            NetworkClient.UnregisterSpawnHandler(validPrefabAssetId);
-            Assert.IsFalse(NetworkClient.unspawnHandlers.ContainsKey(validPrefabAssetId));
+            NetworkClient.unspawnHandlers.Add(validPrefabGuid, new UnSpawnDelegate(x => {}));
+            NetworkClient.UnregisterSpawnHandler(validPrefabGuid);
+            Assert.IsFalse(NetworkClient.unspawnHandlers.ContainsKey(validPrefabGuid));
         }
 
         [Test]
         public void DoesNotRemovePrefabDictionary()
         {
-            NetworkClient.prefabs.Add(validPrefabAssetId, validPrefab);
-            NetworkClient.UnregisterSpawnHandler(validPrefabAssetId);
+            NetworkClient.prefabs.Add(validPrefabGuid, validPrefab);
+            NetworkClient.UnregisterSpawnHandler(validPrefabGuid);
             // Should not be removed
-            Assert.IsTrue(NetworkClient.prefabs.ContainsKey(validPrefabAssetId));
+            Assert.IsTrue(NetworkClient.prefabs.ContainsKey(validPrefabGuid));
         }
 
     }

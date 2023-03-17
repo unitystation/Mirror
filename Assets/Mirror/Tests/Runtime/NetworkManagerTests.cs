@@ -15,7 +15,7 @@ namespace Mirror.Tests.Runtime
             yield return null;
             activeScene = SceneManager.GetActiveScene();
 
-            bool isActive = Utils.IsSceneActive(sceneToCheck);
+            bool isActive = NetworkManager.IsSceneActive(sceneToCheck);
             Assert.That(isActive, Is.EqualTo(expected));
         }
 

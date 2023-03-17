@@ -23,8 +23,8 @@ namespace Mirror.Tests
         protected NetworkIdentity validPrefabNetworkIdentity;
         protected GameObject prefabWithChildren;
         protected GameObject invalidPrefab;
-        protected uint validPrefabAssetId;
-        protected uint anotherAssetId;
+        protected Guid validPrefabGuid;
+        protected Guid anotherGuid;
 
         static GameObject LoadPrefab(string guid)
         {
@@ -38,15 +38,15 @@ namespace Mirror.Tests
             validPrefabNetworkIdentity = validPrefab.GetComponent<NetworkIdentity>();
             prefabWithChildren = LoadPrefab(PrefabWithChildrenAssetGuid);
             invalidPrefab = LoadPrefab(InvalidPrefabAssetGuid);
-            validPrefabAssetId = (uint)(new Guid(ValidPrefabAssetGuid).GetHashCode());
-            anotherAssetId = (uint)(new Guid(AnotherGuidString).GetHashCode());
+            validPrefabGuid = new Guid(ValidPrefabAssetGuid);
+            anotherGuid = new Guid(AnotherGuidString);
         }
 
         [TearDown]
         public override void TearDown()
         {
             // reset asset id in case they are changed by tests
-            validPrefabNetworkIdentity.assetId = validPrefabAssetId;
+            validPrefabNetworkIdentity.assetId = validPrefabGuid;
 
             base.TearDown();
         }

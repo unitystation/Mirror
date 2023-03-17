@@ -407,14 +407,14 @@ namespace Mirror.Tests.SyncVarAttributeTests
             NetworkWriter ownerWriter = new NetworkWriter();
             // not really used in this Test
             NetworkWriter observersWriter = new NetworkWriter();
-            serverIdentity.SerializeServer(true, ownerWriter, observersWriter);
+            serverIdentity.OnSerializeAllSafely(true, ownerWriter, observersWriter);
 
             // set up a "client" object
             CreateNetworked(out _, out NetworkIdentity clientIdentity, out SyncVarAbstractNetworkBehaviour clientBehaviour);
 
             // apply all the data from the server object
             NetworkReader reader = new NetworkReader(ownerWriter.ToArray());
-            clientIdentity.DeserializeClient(reader, true);
+            clientIdentity.OnDeserializeAllSafely(reader, true);
 
             // check that the syncvars got updated
             Assert.That(clientBehaviour.monster1, Is.EqualTo(serverBehaviour.monster1), "Data should be synchronized");

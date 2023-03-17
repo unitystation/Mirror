@@ -26,10 +26,13 @@ namespace Mirror.Tests.MessageTests
         public void MethodsWithNoArgs()
         {
             const int value = 10;
-            NoArgMethodMessage intMessage = new NoArgMethodMessage {someValue = value};
+            NoArgMethodMessage intMessage = new NoArgMethodMessage
+            {
+                someValue = value
+            };
 
-            byte[] data = NetworkMessagesTest.PackToByteArray(intMessage);
-            NoArgMethodMessage unpacked = NetworkMessagesTest.UnpackFromByteArray<NoArgMethodMessage>(data);
+            byte[] data = MessagePackingTest.PackToByteArray(intMessage);
+            NoArgMethodMessage unpacked = MessagePackingTest.UnpackFromByteArray<NoArgMethodMessage>(data);
             Assert.That(unpacked.someValue, Is.EqualTo(value));
         }
 
@@ -37,10 +40,13 @@ namespace Mirror.Tests.MessageTests
         public void MethodsWithTwoArgs()
         {
             const int value = 10;
-            TwoArgMethodMessage intMessage = new TwoArgMethodMessage {someValue = value};
+            TwoArgMethodMessage intMessage = new TwoArgMethodMessage
+            {
+                someValue = value
+            };
 
-            byte[] data = NetworkMessagesTest.PackToByteArray(intMessage);
-            TwoArgMethodMessage unpacked = NetworkMessagesTest.UnpackFromByteArray<TwoArgMethodMessage>(data);
+            byte[] data = MessagePackingTest.PackToByteArray(intMessage);
+            TwoArgMethodMessage unpacked = MessagePackingTest.UnpackFromByteArray<TwoArgMethodMessage>(data);
             Assert.That(unpacked.someValue, Is.EqualTo(value));
         }
     }

@@ -188,8 +188,7 @@ namespace Mirror.Tests.RemoteAttrributeTest
                 Assert.That(incomingInt, Is.EqualTo(someInt));
             };
             hostBehaviour.SendInt(someInt);
-            ProcessMessages(); // first update flushes the rpc on the server
-            ProcessMessages(); // second update processes it on the client
+            ProcessMessages();
             Assert.That(called, Is.EqualTo(1));
         }
     }

@@ -22,7 +22,6 @@ namespace Mirror.Tests
         {
             base.SetUp();
             manager = transport.gameObject.AddComponent<NetworkManagerOnServerDisconnect>();
-            manager.transport = transport;
         }
 
         // test to prevent https://github.com/vis2k/Mirror/issues/1515

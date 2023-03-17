@@ -76,19 +76,19 @@ namespace Mirror.Tests
                     NetworkClient.RegisterPrefab(prefab);
                     break;
                 case RegisterPrefabOverload.Prefab_NewAssetId:
-                    NetworkClient.RegisterPrefab(prefab, anotherAssetId);
+                    NetworkClient.RegisterPrefab(prefab, anotherGuid);
                     break;
                 case RegisterPrefabOverload.Prefab_SpawnDelegate:
                     NetworkClient.RegisterPrefab(prefab, spawnHandler, unspawnHandler);
                     break;
                 case RegisterPrefabOverload.Prefab_SpawnDelegate_NewAssetId:
-                    NetworkClient.RegisterPrefab(prefab, anotherAssetId, spawnHandler, unspawnHandler);
+                    NetworkClient.RegisterPrefab(prefab, anotherGuid, spawnHandler, unspawnHandler);
                     break;
                 case RegisterPrefabOverload.Prefab_SpawnHandlerDelegate:
                     NetworkClient.RegisterPrefab(prefab, spawnHandlerDelegate, unspawnHandler);
                     break;
                 case RegisterPrefabOverload.Prefab_SpawnHandlerDelegate_NewAssetId:
-                    NetworkClient.RegisterPrefab(prefab, anotherAssetId, spawnHandlerDelegate, unspawnHandler);
+                    NetworkClient.RegisterPrefab(prefab, anotherGuid, spawnHandlerDelegate, unspawnHandler);
                     break;
 
                 default:
@@ -97,7 +97,7 @@ namespace Mirror.Tests
             }
         }
 
-        protected void CallRegisterPrefab(GameObject prefab, RegisterPrefabOverload overload, uint guid)
+        protected void CallRegisterPrefab(GameObject prefab, RegisterPrefabOverload overload, Guid guid)
         {
             SpawnDelegate spawnHandler = new SpawnDelegate((x, y) => null);
             SpawnHandlerDelegate spawnHandlerDelegate = new SpawnHandlerDelegate(x => null);
@@ -136,7 +136,7 @@ namespace Mirror.Tests
                     NetworkClient.RegisterPrefab(prefab, spawnHandler, unspawnHandler);
                     break;
                 case RegisterPrefabOverload.Prefab_SpawnDelegate_NewAssetId:
-                    NetworkClient.RegisterPrefab(prefab, anotherAssetId, spawnHandler, unspawnHandler);
+                    NetworkClient.RegisterPrefab(prefab, anotherGuid, spawnHandler, unspawnHandler);
                     break;
 
                 case RegisterPrefabOverload.Prefab:
@@ -161,7 +161,7 @@ namespace Mirror.Tests
                     NetworkClient.RegisterPrefab(prefab, spawnHandlerDelegate, unspawnHandler);
                     break;
                 case RegisterPrefabOverload.Prefab_SpawnHandlerDelegate_NewAssetId:
-                    NetworkClient.RegisterPrefab(prefab, anotherAssetId, spawnHandlerDelegate, unspawnHandler);
+                    NetworkClient.RegisterPrefab(prefab, anotherGuid, spawnHandlerDelegate, unspawnHandler);
                     break;
 
                 case RegisterPrefabOverload.Prefab:
@@ -188,13 +188,13 @@ namespace Mirror.Tests
                     NetworkClient.RegisterPrefab(prefab, spawnHandler, unspawnHandler);
                     break;
                 case RegisterPrefabOverload.Prefab_SpawnDelegate_NewAssetId:
-                    NetworkClient.RegisterPrefab(prefab, anotherAssetId, spawnHandler, unspawnHandler);
+                    NetworkClient.RegisterPrefab(prefab, anotherGuid, spawnHandler, unspawnHandler);
                     break;
                 case RegisterPrefabOverload.Prefab_SpawnHandlerDelegate:
                     NetworkClient.RegisterPrefab(prefab, spawnHandlerDelegate, unspawnHandler);
                     break;
                 case RegisterPrefabOverload.Prefab_SpawnHandlerDelegate_NewAssetId:
-                    NetworkClient.RegisterPrefab(prefab, anotherAssetId, spawnHandlerDelegate, unspawnHandler);
+                    NetworkClient.RegisterPrefab(prefab, anotherGuid, spawnHandlerDelegate, unspawnHandler);
                     break;
 
                 case RegisterPrefabOverload.Prefab:
@@ -207,6 +207,6 @@ namespace Mirror.Tests
             }
         }
 
-        protected uint AssetIdForOverload(RegisterPrefabOverload overload) => OverloadWithAssetId(overload) ? anotherAssetId : validPrefabAssetId;
+        protected Guid GuidForOverload(RegisterPrefabOverload overload) => OverloadWithAssetId(overload) ? anotherGuid : validPrefabGuid;
     }
 }

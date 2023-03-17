@@ -1,14 +1,13 @@
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace Mirror.Examples.Chat
 {
     public class Player : NetworkBehaviour
     {
-        internal static readonly HashSet<string> playerNames = new HashSet<string>();
+        public static readonly HashSet<string> playerNames = new HashSet<string>();
 
-        [SerializeField, SyncVar]
-        internal string playerName;
+        [SyncVar(hook = nameof(OnPlayerNameChanged))]
+        public string playerName;
 
         // RuntimeInitializeOnLoadMethod -> fast playmode without domain reload
         [UnityEngine.RuntimeInitializeOnLoadMethod]
@@ -17,14 +16,14 @@ namespace Mirror.Examples.Chat
             playerNames.Clear();
         }
 
+        void OnPlayerNameChanged(string _, string newName)
+        {
+            ChatUI.instance.localPlayerName = playerName;
+        }
+
         public override void OnStartServer()
         {
             playerName = (string)connectionToClient.authenticationData;
-        }
-
-        public override void OnStartLocalPlayer()
-        {
-            ChatUI.localPlayerName = playerName;
         }
     }
 }

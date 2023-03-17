@@ -44,10 +44,6 @@ namespace Mirror.Tests
             serverSyncList = new SyncList<string>();
             clientSyncList = new SyncList<string>();
 
-            // set writable
-            serverSyncList.IsWritable = () => true;
-            clientSyncList.IsWritable = () => false;
-
             // add some data to the list
             serverSyncList.Add("Hello");
             serverSyncList.Add("World");
@@ -371,10 +367,10 @@ namespace Mirror.Tests
         [Test]
         public void ObjectCanBeReusedAfterReset()
         {
-            serverSyncList.Reset();
+            clientSyncList.Reset();
 
             // make old client the host
-            SyncList<string> hostList = serverSyncList;
+            SyncList<string> hostList = clientSyncList;
             SyncList<string> clientList2 = new SyncList<string>();
 
             Assert.That(hostList.IsReadOnly, Is.False);
@@ -383,6 +379,14 @@ namespace Mirror.Tests
             hostList.Add("hello");
             hostList.Add("world");
             SerializeDeltaTo(hostList, clientList2);
+        }
+
+        [Test]
+        public void ResetShouldSetReadOnlyToFalse()
+        {
+            clientSyncList.Reset();
+
+            Assert.That(clientSyncList.IsReadOnly, Is.False);
         }
 
         [Test]
@@ -416,12 +420,13 @@ namespace Mirror.Tests
     {
         public static uint GetChangeCount(this SyncObject syncObject)
         {
-            using (NetworkWriterPooled writer = NetworkWriterPool.Get())
+            PooledNetworkWriter writer = NetworkWriterPool.GetWriter();
             {
                 syncObject.OnSerializeDelta(writer);
 
-                using (NetworkReaderPooled reader = NetworkReaderPool.Get(writer.ToArraySegment()))
+                using (PooledNetworkReader reader = NetworkReaderPool.GetReader(writer.ToArraySegment()))
                 {
+                    writer.Recycle();
                     return reader.ReadUInt();
                 }
             }

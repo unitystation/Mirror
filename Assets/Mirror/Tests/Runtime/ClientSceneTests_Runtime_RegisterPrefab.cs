@@ -19,7 +19,7 @@ namespace Mirror.Tests.Runtime.ClientSceneTests
 
             //test
             CallRegisterPrefab(runtimeObject, overload);
-            Assert.IsTrue(NetworkClient.spawnHandlers.ContainsKey(anotherAssetId));
+            Assert.IsTrue(NetworkClient.spawnHandlers.ContainsKey(anotherGuid));
         }
 
         [Test]
@@ -50,10 +50,10 @@ namespace Mirror.Tests.Runtime.ClientSceneTests
             //test
             CallRegisterPrefab(runtimeObject, overload);
 
-            Assert.IsTrue(NetworkClient.prefabs.ContainsKey(anotherAssetId));
-            Assert.AreEqual(NetworkClient.prefabs[anotherAssetId], runtimeObject);
+            Assert.IsTrue(NetworkClient.prefabs.ContainsKey(anotherGuid));
+            Assert.AreEqual(NetworkClient.prefabs[anotherGuid], runtimeObject);
 
-            Assert.AreEqual(networkIdentity.assetId, anotherAssetId);
+            Assert.AreEqual(networkIdentity.assetId, anotherGuid);
         }
 
         [Test]
@@ -66,7 +66,7 @@ namespace Mirror.Tests.Runtime.ClientSceneTests
 
             //test
             CallRegisterPrefab(runtimeObject, overload);
-            Assert.IsTrue(NetworkClient.unspawnHandlers.ContainsKey(anotherAssetId));
+            Assert.IsTrue(NetworkClient.unspawnHandlers.ContainsKey(anotherGuid));
         }
     }
 }

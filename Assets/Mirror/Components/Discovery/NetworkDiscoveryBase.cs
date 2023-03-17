@@ -39,10 +39,6 @@ namespace Mirror.Discovery
         [Tooltip("Time in seconds between multi-cast messages")]
         [Range(1, 60)]
         float ActiveDiscoveryInterval = 3;
-        
-        // broadcast address needs to be configurable on iOS:
-        // https://github.com/vis2k/Mirror/pull/3255
-        public string BroadcastAddress = "";
 
         protected UdpClient serverUdpClient;
         protected UdpClient clientUdpClient;
@@ -179,7 +175,7 @@ namespace Mirror.Discovery
 
             UdpReceiveResult udpReceiveResult = await udpClient.ReceiveAsync();
 
-            using (NetworkReaderPooled networkReader = NetworkReaderPool.Get(udpReceiveResult.Buffer))
+            using (PooledNetworkReader networkReader = NetworkReaderPool.GetReader(udpReceiveResult.Buffer))
             {
                 long handshake = networkReader.ReadLong();
                 if (handshake != secretHandshake)
@@ -210,8 +206,8 @@ namespace Mirror.Discovery
             if (info == null)
                 return;
 
-            using (NetworkWriterPooled writer = NetworkWriterPool.Get())
-            {
+            PooledNetworkWriter writer = NetworkWriterPool.GetWriter();
+
                 try
                 {
                     writer.WriteLong(secretHandshake);
@@ -227,7 +223,7 @@ namespace Mirror.Discovery
                 {
                     Debug.LogException(ex, this);
                 }
-            }
+                writer.Recycle();
         }
 
         /// <summary>
@@ -251,7 +247,7 @@ namespace Mirror.Discovery
 		{
 #if UNITY_ANDROID
             if (hasMulticastLock) return;
-                
+
             if (Application.platform == RuntimePlatform.Android)
             {
                 using (AndroidJavaObject activity = new AndroidJavaClass("com.unity3d.player.UnityPlayer").GetStatic<AndroidJavaObject>("currentActivity"))
@@ -271,7 +267,7 @@ namespace Mirror.Discovery
         {
 #if UNITY_ANDROID
             if (!hasMulticastLock) return;
-            
+
             multicastLock?.Call("release");
             hasMulticastLock = false;
 #endif
@@ -328,16 +324,16 @@ namespace Mirror.Discovery
         /// <returns>ClientListenAsync Task</returns>
         public async Task ClientListenAsync()
         {
-            // while clientUpdClient to fix: 
+            // while clientUpdClient to fix:
             // https://github.com/vis2k/Mirror/pull/2908
             //
             // If, you cancel discovery the clientUdpClient is set to null.
             // However, nothing cancels ClientListenAsync. If we change the if(true)
-            // to check if the client is null. You can properly cancel the discovery, 
+            // to check if the client is null. You can properly cancel the discovery,
             // and kill the listen thread.
             //
-            // Prior to this fix, if you cancel the discovery search. It crashes the 
-            // thread, and is super noisy in the output. As well as causes issues on 
+            // Prior to this fix, if you cancel the discovery search. It crashes the
+            // thread, and is super noisy in the output. As well as causes issues on
             // the quest.
             while (clientUdpClient != null)
             {
@@ -372,21 +368,9 @@ namespace Mirror.Discovery
             }
 
             IPEndPoint endPoint = new IPEndPoint(IPAddress.Broadcast, serverBroadcastListenPort);
-            
-            if (!string.IsNullOrWhiteSpace(BroadcastAddress))
-            {
-                try
-                {
-                    endPoint = new IPEndPoint(IPAddress.Parse(BroadcastAddress), serverBroadcastListenPort);
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogException(ex);
-                }
-            }
 
-            using (NetworkWriterPooled writer = NetworkWriterPool.Get())
-            {
+            PooledNetworkWriter writer = NetworkWriterPool.GetWriter();
+
                 writer.WriteLong(secretHandshake);
 
                 try
@@ -403,7 +387,7 @@ namespace Mirror.Discovery
                 {
                     // It is ok if we can't broadcast to one of the addresses
                 }
-            }
+                writer.Recycle();
         }
 
         /// <summary>
@@ -422,7 +406,7 @@ namespace Mirror.Discovery
 
             UdpReceiveResult udpReceiveResult = await udpClient.ReceiveAsync();
 
-            using (NetworkReaderPooled networkReader = NetworkReaderPool.Get(udpReceiveResult.Buffer))
+            using (PooledNetworkReader networkReader = NetworkReaderPool.GetReader(udpReceiveResult.Buffer))
             {
                 if (networkReader.ReadLong() != secretHandshake)
                     return;

@@ -30,7 +30,7 @@ namespace Mirror.Discovery
             // so make sure we set it here in Start()  (after awakes)
             // Or just let the user assign it in the inspector
             if (transport == null)
-                transport = Transport.active;
+                transport = Transport.activeTransport;
 
             base.Start();
         }
@@ -68,9 +68,11 @@ namespace Mirror.Discovery
                 throw;
             }
         }
+
         #endregion
 
         #region Client
+
         /// <summary>
         /// Create a message that will be broadcasted on the network to discover servers
         /// </summary>
@@ -106,6 +108,7 @@ namespace Mirror.Discovery
 
             OnServerFound.Invoke(response);
         }
+
         #endregion
     }
 }

@@ -48,21 +48,16 @@ namespace Mirror.Weaver
             {
                 return null;
             }
-            foreach (MethodDefinition methodDef in tr.Resolve().Methods)
+            foreach (MethodDefinition methodRef in tr.Resolve().Methods)
             {
-                if (methodDef.Name == name)
+                if (methodRef.Name == name)
                 {
-                    MethodReference methodRef = methodDef;
-                    if (tr.IsGenericInstance)
-                    {
-                        methodRef = methodRef.MakeHostInstanceGeneric(tr.Module, (GenericInstanceType)tr);
-                    }
                     return assembly.MainModule.ImportReference(methodRef);
                 }
             }
 
             // Could not find the method in this class,  try the parent
-            return TryResolveMethodInParents(tr.Resolve().BaseType.ApplyGenericParameters(tr), assembly, name);
+            return TryResolveMethodInParents(tr.Resolve().BaseType, assembly, name);
         }
 
         public static MethodDefinition ResolveDefaultPublicCtor(TypeReference variable)

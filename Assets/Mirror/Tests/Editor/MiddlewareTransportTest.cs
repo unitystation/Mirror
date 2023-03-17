@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using NSubstitute;
 using NUnit.Framework;
 using UnityEngine;
@@ -255,19 +256,23 @@ namespace Mirror.Tests
         [Test]
         public void TestClientErrorCallback()
         {
+            Exception exception = new InvalidDataException();
+
             int called = 0;
-            middleware.OnClientError = (error, reason) =>
+            middleware.OnClientError = (e) =>
             {
                 called++;
-                Assert.That(error, Is.EqualTo(TransportError.Unexpected));
+                Assert.That(e, Is.EqualTo(exception));
             };
             // connect to give callback to inner
             middleware.ClientConnect("localhost");
 
-            inner.OnClientError.Invoke(TransportError.Unexpected, "");
+            inner.OnClientError.Invoke(exception);
             Assert.That(called, Is.EqualTo(1));
 
-            inner.OnClientError.Invoke(TransportError.Unexpected, "");
+            exception = new NullReferenceException();
+
+            inner.OnClientError.Invoke(exception);
             Assert.That(called, Is.EqualTo(2));
         }
 
@@ -357,20 +362,24 @@ namespace Mirror.Tests
         [TestCase(19)]
         public void TestServerErrorCallback(int id)
         {
+            Exception exception = new InvalidDataException();
+
             int called = 0;
-            middleware.OnServerError = (i, error, reason) =>
+            middleware.OnServerError = (i, e) =>
             {
                 called++;
                 Assert.That(i, Is.EqualTo(id));
-                Assert.That(error, Is.EqualTo(TransportError.Unexpected));
+                Assert.That(e, Is.EqualTo(exception));
             };
             // start to give callback to inner
             middleware.ServerStart();
 
-            inner.OnServerError.Invoke(id, TransportError.Unexpected, "");
+            inner.OnServerError.Invoke(id, exception);
             Assert.That(called, Is.EqualTo(1));
 
-            inner.OnServerError.Invoke(id, TransportError.Unexpected, "");
+            exception = new NullReferenceException();
+
+            inner.OnServerError.Invoke(id, exception);
             Assert.That(called, Is.EqualTo(2));
         }
     }

@@ -35,10 +35,6 @@ namespace Mirror.Tests
             serverSyncDictionary = new SyncDictionary<int, string>();
             clientSyncDictionary = new SyncDictionary<int, string>();
 
-            // set writable
-            serverSyncDictionary.IsWritable = () => true;
-            clientSyncDictionary.IsWritable = () => false;
-
             // add some data to the list
             serverSyncDictionary.Add(0, "Hello");
             serverSyncDictionary.Add(1, "World");
@@ -309,16 +305,25 @@ namespace Mirror.Tests
         [Test]
         public void ObjectCanBeReusedAfterReset()
         {
-            serverSyncDictionary.Reset();
+            clientSyncDictionary.Reset();
 
-            // make old server the host
-            SyncDictionary<int, string> hostList = serverSyncDictionary;
+            // make old client the host
+            SyncDictionary<int, string> hostList = clientSyncDictionary;
             SyncDictionary<int, string> clientList2 = new SyncDictionary<int, string>();
+
+            Assert.That(hostList.IsReadOnly, Is.False);
 
             // Check Add and Sync without errors
             hostList.Add(30, "hello");
             hostList.Add(35, "world");
             SerializeDeltaTo(hostList, clientList2);
+        }
+
+        [Test]
+        public void ResetShouldSetReadOnlyToFalse()
+        {
+            clientSyncDictionary.Reset();
+            Assert.That(clientSyncDictionary.IsReadOnly, Is.False);
         }
 
         [Test]

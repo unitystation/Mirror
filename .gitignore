@@ -38,7 +38,6 @@ Source/Source.sln
 Output/
 bin/
 .vs/
-.vscode/
 .idea/
 Mirror/packages
 .mfractor
@@ -53,8 +52,6 @@ Obj
 *.mdb
 *.mdb.meta
 ProjectSettings/Packages/com.unity.testtools.codecoverage/Settings.json
-ProjectSettings/RiderScriptEditorPersistedState.asset
-ProjectSettings/SceneTemplateSettings.json
 UserSettings/
 # Packages/manifest.json is enough. lock is auto generated from it.
 Packages/packages-lock.json

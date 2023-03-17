@@ -14,7 +14,7 @@ namespace Mirror.Tests.ClientSceneTests
         public event Action OnDeserializeCalled;
         public event Action OnSerializeCalled;
 
-        public override void OnSerialize(NetworkWriter writer, bool initialState)
+        public override bool OnSerialize(NetworkWriter writer, bool initialState)
         {
             base.OnSerialize(writer, initialState);
 
@@ -22,6 +22,8 @@ namespace Mirror.Tests.ClientSceneTests
             writer.WriteVector3(direction);
 
             OnSerializeCalled?.Invoke();
+
+            return true;
         }
         public override void OnDeserialize(NetworkReader reader, bool initialState)
         {
@@ -89,7 +91,7 @@ namespace Mirror.Tests.ClientSceneTests
             const uint netId = 1001;
             SpawnMessage msg = new SpawnMessage
             {
-                assetId = 0,
+                assetId = new Guid(),
                 sceneId = 0,
                 netId = netId
             };
@@ -108,11 +110,11 @@ namespace Mirror.Tests.ClientSceneTests
             SpawnMessage msg = new SpawnMessage
             {
                 netId = netId,
-                assetId = validPrefabAssetId
+                assetId = validPrefabGuid
 
             };
 
-            NetworkClient.prefabs.Add(validPrefabAssetId, validPrefab);
+            NetworkClient.prefabs.Add(validPrefabGuid, validPrefab);
 
             bool success = NetworkClient.FindOrSpawnObject(msg, out NetworkIdentity networkIdentity);
 
@@ -131,11 +133,11 @@ namespace Mirror.Tests.ClientSceneTests
             SpawnMessage msg = new SpawnMessage
             {
                 netId = netId,
-                assetId = validPrefabAssetId
+                assetId = validPrefabGuid
             };
 
             // could happen if the prefab is destroyed or unloaded
-            NetworkClient.prefabs.Add(validPrefabAssetId, null);
+            NetworkClient.prefabs.Add(validPrefabGuid, null);
 
             LogAssert.Expect(LogType.Error, $"Failed to spawn server object, did you forget to add it to the NetworkManager? assetId={msg.assetId} netId={msg.netId}");
             LogAssert.Expect(LogType.Error, $"Could not spawn assetId={msg.assetId} scene={msg.sceneId:X} netId={msg.netId}");
@@ -146,31 +148,32 @@ namespace Mirror.Tests.ClientSceneTests
             Assert.IsNull(networkIdentity);
         }
 
-        // test to prevent https://github.com/vis2k/Mirror/issues/2705
         [Test]
-        public void FindOrSpawnObject_SpawnsFromHandlerIfBothPrefabAndHandlerExists()
+        public void FindOrSpawnObject_SpawnsFromPrefabIfBothPrefabAndHandlerExists()
         {
             const uint netId = 1003;
             int handlerCalled = 0;
             SpawnMessage msg = new SpawnMessage
             {
                 netId = netId,
-                assetId = validPrefabAssetId
+                assetId = validPrefabGuid
             };
 
-            NetworkClient.prefabs.Add(validPrefabAssetId, validPrefab);
-            NetworkClient.spawnHandlers.Add(validPrefabAssetId, x =>
+            NetworkClient.prefabs.Add(validPrefabGuid, validPrefab);
+            NetworkClient.spawnHandlers.Add(validPrefabGuid, x =>
             {
                 handlerCalled++;
                 CreateNetworked(out GameObject go, out NetworkIdentity _);
                 return go;
             });
 
+
             bool success = NetworkClient.FindOrSpawnObject(msg, out NetworkIdentity networkIdentity);
 
             Assert.IsTrue(success);
             Assert.IsNotNull(networkIdentity);
-            Assert.That(handlerCalled, Is.EqualTo(1));
+            Assert.That(networkIdentity.name, Is.EqualTo($"{validPrefab.name}(Clone)"));
+            Assert.That(handlerCalled, Is.EqualTo(0), "Handler should not have been called");
         }
 
         [Test]
@@ -181,12 +184,12 @@ namespace Mirror.Tests.ClientSceneTests
             SpawnMessage msg = new SpawnMessage
             {
                 netId = netId,
-                assetId = validPrefabAssetId
+                assetId = validPrefabGuid
             };
 
             GameObject createdInhandler = null;
 
-            NetworkClient.spawnHandlers.Add(validPrefabAssetId, x =>
+            NetworkClient.spawnHandlers.Add(validPrefabGuid, x =>
             {
                 handlerCalled++;
                 Assert.That(x, Is.EqualTo(msg));
@@ -209,10 +212,10 @@ namespace Mirror.Tests.ClientSceneTests
             SpawnMessage msg = new SpawnMessage
             {
                 netId = netId,
-                assetId = validPrefabAssetId
+                assetId = validPrefabGuid
             };
 
-            NetworkClient.spawnHandlers.Add(validPrefabAssetId, (x) => null);
+            NetworkClient.spawnHandlers.Add(validPrefabGuid, (x) => null);
 
             LogAssert.Expect(LogType.Error, $"Spawn Handler returned null, Handler assetId '{msg.assetId}'");
             LogAssert.Expect(LogType.Error, $"Could not spawn assetId={msg.assetId} scene={msg.sceneId:X} netId={msg.netId}");
@@ -228,16 +231,16 @@ namespace Mirror.Tests.ClientSceneTests
             SpawnMessage msg = new SpawnMessage
             {
                 netId = netId,
-                assetId = validPrefabAssetId
+                assetId = validPrefabGuid
             };
 
-            NetworkClient.spawnHandlers.Add(validPrefabAssetId, (x) =>
+            NetworkClient.spawnHandlers.Add(validPrefabGuid, (x) =>
             {
                 CreateGameObject(out GameObject go);
                 return go;
             });
 
-            LogAssert.Expect(LogType.Error, $"Object Spawned by handler did not have a NetworkIdentity, Handler assetId '{validPrefabAssetId}'");
+            LogAssert.Expect(LogType.Error, $"Object Spawned by handler did not have a NetworkIdentity, Handler assetId '{validPrefabGuid}'");
             LogAssert.Expect(LogType.Error, $"Could not spawn assetId={msg.assetId} scene={msg.sceneId:X} netId={msg.netId}");
             bool success = NetworkClient.FindOrSpawnObject(msg, out NetworkIdentity networkIdentity);
 
@@ -284,10 +287,10 @@ namespace Mirror.Tests.ClientSceneTests
             {
                 netId = netId,
                 sceneId = sceneId,
-                assetId = validPrefabAssetId
+                assetId = validPrefabGuid
             };
 
-            NetworkClient.prefabs.Add(validPrefabAssetId, validPrefab);
+            NetworkClient.prefabs.Add(validPrefabGuid, validPrefab);
             NetworkIdentity sceneObject = CreateSceneObject(sceneId);
 
             bool success = NetworkClient.FindOrSpawnObject(msg, out NetworkIdentity networkIdentity);
@@ -333,7 +336,7 @@ namespace Mirror.Tests.ClientSceneTests
                 isLocalPlayer = false,
                 isOwner = false,
                 sceneId = 0,
-                assetId = 0,
+                assetId = Guid.Empty,
                 // use local values for VR support
                 position = position,
                 rotation = rotation,
@@ -372,7 +375,7 @@ namespace Mirror.Tests.ClientSceneTests
                 isLocalPlayer = false,
                 isOwner = false,
                 sceneId = 0,
-                assetId = 0,
+                assetId = Guid.Empty,
                 // use local values for VR support
                 position = position,
                 rotation = rotation,
@@ -405,7 +408,7 @@ namespace Mirror.Tests.ClientSceneTests
                 isLocalPlayer = false,
                 isOwner = isOwner,
                 sceneId = 0,
-                assetId = 0,
+                assetId = Guid.Empty,
                 // use local values for VR support
                 position = Vector3.zero,
                 rotation = Quaternion.identity,
@@ -415,11 +418,11 @@ namespace Mirror.Tests.ClientSceneTests
             };
 
             // set to opposite to make sure it is changed
-            identity.isOwned = !isOwner;
+            identity.hasAuthority = !isOwner;
 
             NetworkClient.ApplySpawnPayload(identity, msg);
 
-            Assert.That(identity.isOwned, Is.EqualTo(isOwner));
+            Assert.That(identity.hasAuthority, Is.EqualTo(isOwner));
         }
 
         [Test]
@@ -438,7 +441,7 @@ namespace Mirror.Tests.ClientSceneTests
                 isLocalPlayer = false,
                 isOwner = false,
                 sceneId = 0,
-                assetId = 0,
+                assetId = Guid.Empty,
                 // use local values for VR support
                 position = Vector3.zero,
                 rotation = Quaternion.identity,
@@ -459,14 +462,14 @@ namespace Mirror.Tests.ClientSceneTests
 
             CreateNetworked(out _, out NetworkIdentity identity);
 
-            uint assetId = 42;
+            Guid guid = Guid.NewGuid();
             SpawnMessage msg = new SpawnMessage
             {
                 netId = netId,
                 isLocalPlayer = false,
                 isOwner = false,
                 sceneId = 0,
-                assetId = assetId,
+                assetId = guid,
                 // use local values for VR support
                 position = Vector3.zero,
                 rotation = Quaternion.identity,
@@ -479,7 +482,7 @@ namespace Mirror.Tests.ClientSceneTests
 
             Assert.IsTrue(identity.gameObject.activeSelf);
 
-            Assert.That(identity.assetId, Is.EqualTo(assetId));
+            Assert.That(identity.assetId, Is.EqualTo(guid));
         }
 
         [Test]
@@ -488,8 +491,8 @@ namespace Mirror.Tests.ClientSceneTests
             const uint netId = 1000;
 
             CreateNetworked(out _, out NetworkIdentity identity);
-            uint assetId = 42;
-            identity.assetId = assetId;
+            Guid guid = Guid.NewGuid();
+            identity.assetId = guid;
 
             SpawnMessage msg = new SpawnMessage
             {
@@ -497,7 +500,7 @@ namespace Mirror.Tests.ClientSceneTests
                 isLocalPlayer = false,
                 isOwner = false,
                 sceneId = 0,
-                assetId = 0,
+                assetId = Guid.Empty,
                 // use local values for VR support
                 position = Vector3.zero,
                 rotation = Quaternion.identity,
@@ -508,7 +511,7 @@ namespace Mirror.Tests.ClientSceneTests
 
             NetworkClient.ApplySpawnPayload(identity, msg);
 
-            Assert.That(identity.assetId, Is.EqualTo(assetId), "AssetId should not have changed");
+            Assert.That(identity.assetId, Is.EqualTo(guid), "AssetId should not have changed");
         }
 
         [Test]
@@ -525,7 +528,7 @@ namespace Mirror.Tests.ClientSceneTests
                 isLocalPlayer = true,
                 isOwner = true,
                 sceneId = 0,
-                assetId = 0,
+                assetId = Guid.Empty,
                 // use local values for VR support
                 position = Vector3.zero,
                 rotation = Quaternion.identity,
@@ -556,7 +559,7 @@ namespace Mirror.Tests.ClientSceneTests
                 isLocalPlayer = true,
                 isOwner = true,
                 sceneId = 0,
-                assetId = 0,
+                assetId = Guid.Empty,
                 // use local values for VR support
                 position = Vector3.zero,
                 rotation = Quaternion.identity,
@@ -566,7 +569,7 @@ namespace Mirror.Tests.ClientSceneTests
             };
 
 
-            LogAssert.Expect(LogType.Warning, "NetworkClient can't AddPlayer before being ready. Please call NetworkClient.Ready() first. Clients are considered ready after joining the game world.");
+            LogAssert.Expect(LogType.Warning, "No ready connection found for setting player controller during InternalAddPlayer");
             NetworkClient.ApplySpawnPayload(identity, msg);
 
             Assert.That(NetworkClient.localPlayer, Is.EqualTo(identity));

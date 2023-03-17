@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+using System;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -11,28 +11,28 @@ namespace Mirror.Tests.ClientSceneTests
         [TestCase(RegisterPrefabOverload.Prefab)]
         public void Prefab_AddsPrefabToDictionary(RegisterPrefabOverload overload)
         {
-            uint assetId = AssetIdForOverload(overload);
+            Guid guid = GuidForOverload(overload);
 
             CallRegisterPrefab(validPrefab, overload);
 
-            Assert.IsTrue(NetworkClient.prefabs.ContainsKey(assetId));
-            Assert.AreEqual(NetworkClient.prefabs[assetId], validPrefab);
+            Assert.IsTrue(NetworkClient.prefabs.ContainsKey(guid));
+            Assert.AreEqual(NetworkClient.prefabs[guid], validPrefab);
         }
 
         [Test]
         [TestCase(RegisterPrefabOverload.Prefab_NewAssetId)]
         public void PrefabNewGuid_ErrorDoesNotChangePrefabsAssetId(RegisterPrefabOverload overload)
         {
-            uint assetId = anotherAssetId;
+            Guid guid = anotherGuid;
 
-            LogAssert.Expect(LogType.Error, $"Could not register '{validPrefab.name}' to {assetId} because it already had an AssetId, Existing assetId {validPrefabAssetId}");
+            LogAssert.Expect(LogType.Error, $"Could not register '{validPrefab.name}' to {guid} because it already had an AssetId, Existing assetId {validPrefabGuid}");
             CallRegisterPrefab(validPrefab, overload);
 
-            Assert.IsFalse(NetworkClient.prefabs.ContainsKey(assetId));
+            Assert.IsFalse(NetworkClient.prefabs.ContainsKey(guid));
 
             NetworkIdentity netId = validPrefab.GetComponent<NetworkIdentity>();
 
-            Assert.AreEqual(netId.assetId, validPrefabAssetId);
+            Assert.AreEqual(netId.assetId, validPrefabGuid);
         }
 
         [Test]
@@ -40,32 +40,32 @@ namespace Mirror.Tests.ClientSceneTests
         [TestCase(RegisterPrefabOverload.Prefab_SpawnHandlerDelegate_NewAssetId)]
         public void HandlerNewGuid_ErrorDoesNotChangePrefabsAssetId(RegisterPrefabOverload overload)
         {
-            uint assetId = anotherAssetId;
+            Guid guid = anotherGuid;
 
-            LogAssert.Expect(LogType.Error, $"Could not register Handler for '{validPrefab.name}' to {assetId} because it already had an AssetId, Existing assetId {validPrefabAssetId}");
+            LogAssert.Expect(LogType.Error, $"Could not register Handler for '{validPrefab.name}' to {guid} because it already had an AssetId, Existing assetId {validPrefabGuid}");
             CallRegisterPrefab(validPrefab, overload);
 
-            Assert.IsFalse(NetworkClient.spawnHandlers.ContainsKey(assetId));
-            Assert.IsFalse(NetworkClient.unspawnHandlers.ContainsKey(assetId));
+            Assert.IsFalse(NetworkClient.spawnHandlers.ContainsKey(guid));
+            Assert.IsFalse(NetworkClient.unspawnHandlers.ContainsKey(guid));
 
             NetworkIdentity netId = validPrefab.GetComponent<NetworkIdentity>();
 
-            Assert.AreEqual(netId.assetId, validPrefabAssetId);
+            Assert.AreEqual(netId.assetId, validPrefabGuid);
         }
 
         [Test]
         [TestCase(RegisterPrefabOverload.Prefab_NewAssetId)]
         public void PrefabNewGuid_NoErrorWhenNewAssetIdIsSameAsCurrentPrefab(RegisterPrefabOverload overload)
         {
-            uint assetId = validPrefabAssetId;
+            Guid guid = validPrefabGuid;
 
-            CallRegisterPrefab(validPrefab, overload, assetId);
+            CallRegisterPrefab(validPrefab, overload, guid);
 
-            Assert.IsTrue(NetworkClient.prefabs.ContainsKey(assetId));
+            Assert.IsTrue(NetworkClient.prefabs.ContainsKey(guid));
 
             NetworkIdentity netId = validPrefab.GetComponent<NetworkIdentity>();
 
-            Assert.AreEqual(netId.assetId, validPrefabAssetId);
+            Assert.AreEqual(netId.assetId, validPrefabGuid);
         }
 
         [Test]
@@ -73,16 +73,16 @@ namespace Mirror.Tests.ClientSceneTests
         [TestCase(RegisterPrefabOverload.Prefab_SpawnHandlerDelegate_NewAssetId)]
         public void HandlerNewGuid_NoErrorWhenAssetIdIsSameAsCurrentPrefab(RegisterPrefabOverload overload)
         {
-            uint assetId = validPrefabAssetId;
+            Guid guid = validPrefabGuid;
 
-            CallRegisterPrefab(validPrefab, overload, assetId);
+            CallRegisterPrefab(validPrefab, overload, guid);
 
-            Assert.IsTrue(NetworkClient.spawnHandlers.ContainsKey(assetId));
-            Assert.IsTrue(NetworkClient.unspawnHandlers.ContainsKey(assetId));
+            Assert.IsTrue(NetworkClient.spawnHandlers.ContainsKey(guid));
+            Assert.IsTrue(NetworkClient.unspawnHandlers.ContainsKey(guid));
 
             NetworkIdentity netId = validPrefab.GetComponent<NetworkIdentity>();
 
-            Assert.AreEqual(netId.assetId, validPrefabAssetId);
+            Assert.AreEqual(netId.assetId, validPrefabGuid);
         }
 
         [Test]
@@ -129,7 +129,7 @@ namespace Mirror.Tests.ClientSceneTests
                 ? $"Could not register handler for '{validPrefab.name}' with new assetId because the new assetId was empty"
                 : $"Could not register '{validPrefab.name}' with new assetId because the new assetId was empty";
             LogAssert.Expect(LogType.Error, msg);
-            CallRegisterPrefab(validPrefab, overload, 0);
+            CallRegisterPrefab(validPrefab, overload, new Guid());
         }
 
         [Test]
@@ -163,11 +163,11 @@ namespace Mirror.Tests.ClientSceneTests
         [TestCase(RegisterPrefabOverload.Prefab)]
         public void Prefab_WarningForAssetIdAlreadyExistingInPrefabsDictionary(RegisterPrefabOverload overload)
         {
-            uint assetId = AssetIdForOverload(overload);
+            Guid guid = GuidForOverload(overload);
 
-            NetworkClient.prefabs.Add(assetId, validPrefab);
+            NetworkClient.prefabs.Add(guid, validPrefab);
 
-            LogAssert.Expect(LogType.Warning, $"Replacing existing prefab with assetId '{assetId}'. Old prefab '{validPrefab.name}', New prefab '{validPrefab.name}'");
+            LogAssert.Expect(LogType.Warning, $"Replacing existing prefab with assetId '{guid}'. Old prefab '{validPrefab.name}', New prefab '{validPrefab.name}'");
             CallRegisterPrefab(validPrefab, overload);
         }
 
@@ -176,11 +176,11 @@ namespace Mirror.Tests.ClientSceneTests
         [TestCase(RegisterPrefabOverload.Prefab_SpawnHandlerDelegate)]
         public void Handler_ErrorForAssetIdAlreadyExistingInPrefabsDictionary(RegisterPrefabOverload overload)
         {
-            uint assetId = AssetIdForOverload(overload);
+            Guid guid = GuidForOverload(overload);
 
-            NetworkClient.prefabs.Add(assetId, validPrefab);
+            NetworkClient.prefabs.Add(guid, validPrefab);
 
-            LogAssert.Expect(LogType.Error, $"assetId '{assetId}' is already used by prefab '{validPrefab.name}', unregister the prefab first before trying to add handler");
+            LogAssert.Expect(LogType.Error, $"assetId '{guid}' is already used by prefab '{validPrefab.name}', unregister the prefab first before trying to add handler");
             CallRegisterPrefab(validPrefab, overload);
         }
 
@@ -190,16 +190,16 @@ namespace Mirror.Tests.ClientSceneTests
         [TestCase(RegisterPrefabOverload.Prefab_SpawnHandlerDelegate)]
         public void WarningForAssetIdAlreadyExistingInHandlersDictionary(RegisterPrefabOverload overload)
         {
-            uint assetId = AssetIdForOverload(overload);
+            Guid guid = GuidForOverload(overload);
 
-            NetworkClient.spawnHandlers.Add(assetId, x => null);
-            NetworkClient.unspawnHandlers.Add(assetId, x => {});
+            NetworkClient.spawnHandlers.Add(guid, x => null);
+            NetworkClient.unspawnHandlers.Add(guid, x => {});
 
             string msg = OverloadWithHandler(overload)
-                ? $"Replacing existing spawnHandlers for prefab '{validPrefab.name}' with assetId '{assetId}'"
-                : $"Adding prefab '{validPrefab.name}' with assetId '{assetId}' when spawnHandlers with same assetId already exists..*";
+                ? $"Replacing existing spawnHandlers for prefab '{validPrefab.name}' with assetId '{guid}'"
+                : $"Adding prefab '{validPrefab.name}' with assetId '{guid}' when spawnHandlers with same assetId already exists.";
 
-            LogAssert.Expect(LogType.Warning, new Regex(msg));
+            LogAssert.Expect(LogType.Warning, msg);
             CallRegisterPrefab(validPrefab, overload);
         }
 
@@ -210,7 +210,7 @@ namespace Mirror.Tests.ClientSceneTests
         {
             int handlerCalled = 0;
 
-            uint assetId = AssetIdForOverload(overload);
+            Guid guid = GuidForOverload(overload);
             SpawnDelegate handler = new SpawnDelegate((pos, rot) =>
             {
                 handlerCalled++;
@@ -220,10 +220,10 @@ namespace Mirror.Tests.ClientSceneTests
             CallRegisterPrefab(validPrefab, overload, handler);
 
 
-            Assert.IsTrue(NetworkClient.spawnHandlers.ContainsKey(assetId));
+            Assert.IsTrue(NetworkClient.spawnHandlers.ContainsKey(guid));
 
             // check spawnHandler above is called
-            SpawnHandlerDelegate handlerInDictionary = NetworkClient.spawnHandlers[assetId];
+            SpawnHandlerDelegate handlerInDictionary = NetworkClient.spawnHandlers[guid];
             handlerInDictionary.Invoke(default);
             Assert.That(handlerCalled, Is.EqualTo(1));
         }
@@ -235,22 +235,22 @@ namespace Mirror.Tests.ClientSceneTests
             int handlerCalled = 0;
             Vector3 somePosition = new Vector3(10, 20, 3);
 
-            uint assetId = AssetIdForOverload(overload);
-            SpawnDelegate handler = new SpawnDelegate((pos, id) =>
+            Guid guid = GuidForOverload(overload);
+            SpawnDelegate handler = new SpawnDelegate((pos, assetId) =>
             {
                 handlerCalled++;
                 Assert.That(pos, Is.EqualTo(somePosition));
-                Assert.That(id, Is.EqualTo(assetId));
+                Assert.That(assetId, Is.EqualTo(guid));
                 return null;
             });
 
             CallRegisterPrefab(validPrefab, overload, handler);
 
-            Assert.IsTrue(NetworkClient.spawnHandlers.ContainsKey(assetId));
+            Assert.IsTrue(NetworkClient.spawnHandlers.ContainsKey(guid));
 
             // check spawnHandler above is called
-            SpawnHandlerDelegate handlerInDictionary = NetworkClient.spawnHandlers[assetId];
-            handlerInDictionary.Invoke(new SpawnMessage { position = somePosition, assetId = assetId });
+            SpawnHandlerDelegate handlerInDictionary = NetworkClient.spawnHandlers[guid];
+            handlerInDictionary.Invoke(new SpawnMessage { position = somePosition, assetId = guid });
             Assert.That(handlerCalled, Is.EqualTo(1));
         }
 
@@ -259,8 +259,8 @@ namespace Mirror.Tests.ClientSceneTests
         [TestCase(RegisterPrefabOverload.Prefab_SpawnDelegate_NewAssetId)]
         public void SpawnDelegate_ErrorWhenSpawnHandlerIsNull(RegisterPrefabOverload overload)
         {
-            uint assetId = AssetIdForOverload(overload);
-            LogAssert.Expect(LogType.Error, $"Can not Register null SpawnHandler for {assetId}");
+            Guid guid = GuidForOverload(overload);
+            LogAssert.Expect(LogType.Error, $"Can not Register null SpawnHandler for {guid}");
             CallRegisterPrefab(validPrefab, overload, spawnHandler: null);
         }
 
@@ -268,22 +268,22 @@ namespace Mirror.Tests.ClientSceneTests
         [TestCase(RegisterPrefabOverload.Prefab_SpawnHandlerDelegate)]
         public void SpawnHandleDelegate_AddsHandlerToSpawnHandlers(RegisterPrefabOverload overload)
         {
-            uint assetId = AssetIdForOverload(overload);
+            Guid guid = GuidForOverload(overload);
 
             SpawnHandlerDelegate handler = new SpawnHandlerDelegate(x => null);
 
             CallRegisterPrefab(validPrefab, overload, handler);
 
-            Assert.IsTrue(NetworkClient.spawnHandlers.ContainsKey(assetId));
-            Assert.AreEqual(NetworkClient.spawnHandlers[assetId], handler);
+            Assert.IsTrue(NetworkClient.spawnHandlers.ContainsKey(guid));
+            Assert.AreEqual(NetworkClient.spawnHandlers[guid], handler);
         }
 
         [Test]
         [TestCase(RegisterPrefabOverload.Prefab_SpawnHandlerDelegate)]
         public void SpawnHandleDelegate_ErrorWhenSpawnHandlerIsNull(RegisterPrefabOverload overload)
         {
-            uint assetId = AssetIdForOverload(overload);
-            LogAssert.Expect(LogType.Error, $"Can not Register null SpawnHandler for {assetId}");
+            Guid guid = GuidForOverload(overload);
+            LogAssert.Expect(LogType.Error, $"Can not Register null SpawnHandler for {guid}");
             CallRegisterPrefab(validPrefab, overload, spawnHandlerDelegate: null);
         }
 
@@ -292,8 +292,8 @@ namespace Mirror.Tests.ClientSceneTests
         [TestCase(RegisterPrefabOverload.Prefab_SpawnHandlerDelegate)]
         public void Handler_ErrorWhenUnSpawnHandlerIsNull(RegisterPrefabOverload overload)
         {
-            uint assetId = AssetIdForOverload(overload);
-            LogAssert.Expect(LogType.Error, $"Can not Register null UnSpawnHandler for {assetId}");
+            Guid guid = GuidForOverload(overload);
+            LogAssert.Expect(LogType.Error, $"Can not Register null UnSpawnHandler for {guid}");
             CallRegisterPrefab(validPrefab, overload, unspawnHandler: null);
         }
     }
