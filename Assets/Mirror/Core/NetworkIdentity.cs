@@ -51,6 +51,7 @@ namespace Mirror
             {
                 if (_isDirty == false && value)
                 {
+                    _isDirty = true;
                     if (observers == null || observers.Count == 0)
                     {
                        return;
@@ -63,7 +64,7 @@ namespace Mirror
 
                     _isDirty = value;
                 }
-                _isDirty = value;
+
             }
             get
             {
@@ -736,6 +737,15 @@ namespace Mirror
         // warning or logging in this method.
         void OnDestroy()
         {
+            /// UNITYSTATION CODE /// just in case if it's still there
+            if (observers != null)
+            {
+                foreach (var observer in observers)
+                {
+                    observer.Value.RemoveDirty(this);
+                }
+            }
+
             // Objects spawned from Instantiate are not allowed so are destroyed right away
             // we don't want to call NetworkServer.Destroy if this is the case
             if (SpawnedFromInstantiate)
@@ -750,14 +760,6 @@ namespace Mirror
                 NetworkServer.Destroy(gameObject);
             }
 
-            /// UNITYSTATION CODE /// just in case if it's still there
-            if (observers != null)
-            {
-                foreach (var observer in observers)
-                {
-                    observer.Value.RemoveDirty(this);
-                }
-            }
 
             if (isLocalPlayer)
             {
