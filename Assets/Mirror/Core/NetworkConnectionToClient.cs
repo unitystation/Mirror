@@ -78,6 +78,7 @@ namespace Mirror
         /// UNITYSTATION CODE /// logic for adding removing
         public void RemoveDirty(NetworkIdentity RemovingDirty)
         {
+            if (RemovingDirty == null) return;
             var IndexAt = 0;
 
             for (int i = 0; i < EmptyIndex; i++)
