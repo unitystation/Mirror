@@ -51,7 +51,7 @@ namespace Mirror
             {
                 if (_isDirty == false && value)
                 {
-                    _isDirty = true;
+
                     if (observers == null || observers.Count == 0)
                     {
                        return;
@@ -62,7 +62,7 @@ namespace Mirror
                         Observer.Value.AddDirty(this);
                     }
                 }
-
+                _isDirty = value;
             }
             get
             {
