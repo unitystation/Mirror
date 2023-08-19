@@ -320,7 +320,7 @@ namespace Mirror
         [SerializeField, HideInInspector] string m_AssetId;
 
         // Keep track of all sceneIds to detect scene duplicates
-        static readonly Dictionary<ulong, NetworkIdentity> sceneIds =
+        public static readonly Dictionary<ulong, NetworkIdentity> sceneIds =
             new Dictionary<ulong, NetworkIdentity>();
 
         // Helper function to handle Command/Rpc
