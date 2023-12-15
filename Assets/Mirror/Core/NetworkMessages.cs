@@ -189,6 +189,14 @@ namespace Mirror
                 }
                 catch (Exception exception)
                 {
+                    /// UNITYSTATION CODE ///
+                    Debug.LogError($" error processing message Reason: {e}");
+                    if (NetworkServer.spawned.First().Value.isServer) //To prevent stupid disconnect from client having an error on their end
+                    {
+                        Debug.LogError($"Disconnecting connId={conn.connectionId} to prevent exploits from an Exception in MessageHandler: {e.GetType().Name} {e.Message}\n{e.StackTrace}");
+                        conn.Disconnect();
+                        return;
+                    }
                     // should we disconnect on exceptions?
                     if (exceptionsDisconnect)
                     {

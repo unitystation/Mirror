@@ -20,6 +20,11 @@ namespace Mirror
         public static Dictionary<NetworkConnectionToClient, List<UnityEngine.SceneManagement.Scene>> observerSceneList
                 = new Dictionary<NetworkConnectionToClient, List<UnityEngine.SceneManagement.Scene>>();
 
+        /// <summary>
+        /// CUSTOM UNITYSTATION CODE Somewhere to put the logs from all the threads of errors
+        /// </summary>
+        public static string LogString = "";
+
         static bool initialized;
         public static int maxConnections;
 
@@ -1590,6 +1595,7 @@ namespace Mirror
             // Condition (OR) "identity.visible == Visibility.ForceShown" was removed so our custom scene check always works.
             // Add it back if we switch over to spatial management.
             if (aoi == null)
+            //if (aoi == null || identity.visible == Visibility.ForceShown)
             {
                 RebuildObserversDefault(identity, initialize);
             }
@@ -1606,7 +1612,7 @@ namespace Mirror
         {
             // get serialization for this entity (cached)
             // IMPORTANT: int tick avoids floating point inaccuracy over days/weeks
-            NetworkIdentitySerialization serialization = identity.GetSerializationAtTick(FrameCountCash);
+            NetworkIdentitySerialization serialization = identity.GetServerSerializationAtTick(FrameCountCash);
 
             // is this entity owned by this connection?
             bool owned = identity.connectionToClient == connection;
@@ -1634,32 +1640,18 @@ namespace Mirror
         // helper function to broadcast the world to a connection
         static void BroadcastToConnection(NetworkConnectionToClient connection)
         {
-            // for each entity that this connection is seeing
-            /// UNITYSTATION CODE /// removed old loop is now
             var cashedEmpty = connection.EmptyIndex;
             connection.EmptyIndex = 0;
             for (int i = 0; i < cashedEmpty; i++)
             {
-
-                // make sure it's not null or destroyed.
-                // (which can happen if someone uses
-                //  GameObject.Destroy instead of
-                //  NetworkServer.Destroy)
-
                 /// UNITYSTATION CODE ///
                 // Null checks are slow: changed condition.
                 // if (identity != null)
                 var identity = connection.DirtyObserving[i];
-                /// UNITYSTATION CODE /// no longer need to check for is dirty because is always dirty
-                // if (identity.isDirty || identity.lastSerialization.tick == FrameCountCash) //This is thread safe because is dirty gets set false after IsSameLastSerializationTick is set, So it should never be reading it while it's getting change
-                // {
 
                 // get serialization for this entity viewed by this connection
                 // (if anything was serialized this time)
-
-
-                NetworkWriter serialization = GetEntitySerializationForConnection(identity, connection);
-
+                NetworkWriter serialization = SerializeForConnection(identity, connection);
                 if (serialization != null)
                 {
                     EntityStateMessage message = new EntityStateMessage
@@ -1720,6 +1712,11 @@ namespace Mirror
                 Debug.LogError(LogString);
                 LogString = "";
             }
+            FrameCountCash = Time.frameCount;
+            ApplicationIsPlayingCash = Application.isPlaying;
+            //CUSTOM UNITYSTATION CODE// Cashs Time.frameCount and Parallel loop instead of for loop
+            Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
+
 
             // TODO this is way too slow because we iterate ALL spawned :/
             // TODO this is way too complicated :/
@@ -1789,7 +1786,6 @@ namespace Mirror
             }
 
         }
-
 
         // update //////////////////////////////////////////////////////////////
         // NetworkEarlyUpdate called before any Update/FixedUpdate
