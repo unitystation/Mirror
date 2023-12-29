@@ -581,6 +581,16 @@ namespace Mirror
         public void GeneratedSyncVarSetter_NetworkBehaviour<T>(T value, ref T field, ulong dirtyBit, Action<T, T> OnChanged, ref NetworkBehaviourSyncVar netIdField)
             where T : NetworkBehaviour
         {
+            /// UNITYSTATION CODE ///
+            // so we can modify synchvars in the editor, When not playing
+#if UNITY_EDITOR
+	        if (Application.isPlaying == false)
+	        {
+		        field = value;
+		        return;
+	        }
+#endif
+
             if (!SyncVarNetworkBehaviourEqual(value, netIdField))
             {
                 T oldValue = field;
