@@ -929,13 +929,6 @@ namespace Mirror
             // get the new NetworkBehaviour now that netId field is set
             field = GetSyncVarNetworkBehaviour(netIdField, ref field);
 
-#if UNITY_EDITOR
-            if (Application.isPlaying == false)
-            {
-                return;
-            }
-#endif
-
             // any hook? then call if changed.
             if (OnChanged != null && !SyncVarEqual(previousNetId, ref netIdField))
             {
