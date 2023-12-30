@@ -1027,6 +1027,12 @@ namespace Mirror
         // -> ref GameObject as second argument makes OnDeserialize processing easier
         protected T GetSyncVarNetworkBehaviour<T>(NetworkBehaviourSyncVar syncNetBehaviour, ref T behaviourField) where T : NetworkBehaviour
         {
+#if UNITY_EDITOR
+            if (Application.isPlaying == false)
+            {
+                return behaviourField;
+            }
+#endif
             // server always uses the field
             if (isServer)
             {
