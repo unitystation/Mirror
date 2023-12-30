@@ -929,6 +929,8 @@ namespace Mirror
             // get the new NetworkBehaviour now that netId field is set
             field = GetSyncVarNetworkBehaviour(netIdField, ref field);
 
+            /// UNITYSTATION CODE ///
+            // so we can modify synchvars in the editor, When not playing
 #if UNITY_EDITOR
             if (Application.isPlaying == false)
             {
@@ -1034,6 +1036,8 @@ namespace Mirror
         // -> ref GameObject as second argument makes OnDeserialize processing easier
         protected T GetSyncVarNetworkBehaviour<T>(NetworkBehaviourSyncVar syncNetBehaviour, ref T behaviourField) where T : NetworkBehaviour
         {
+            /// UNITYSTATION CODE ///
+            // so we can modify synchvars in the editor, When not playing
 #if UNITY_EDITOR
             if (Application.isPlaying == false)
             {
