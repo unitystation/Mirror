@@ -37,6 +37,9 @@ namespace Mirror
         internal static readonly Dictionary<ushort, NetworkMessageDelegate> handlers =
             new Dictionary<ushort, NetworkMessageDelegate>();
 
+        internal static ushort TimeSnapshotMessageID = 0;
+        internal static NetworkMessageDelegate TimeSnapshotMessageDelegate;
+
         /// <summary>All spawned NetworkIdentities by netId.</summary>
         // client sees OBSERVED spawned ones.
         public static readonly Dictionary<uint, NetworkIdentity> spawned =
@@ -244,6 +247,17 @@ namespace Mirror
         {
             if (NetworkMessages.UnpackId(reader, out ushort msgType))
             {
+                if (msgType == TimeSnapshotMessageID)
+                {
+                    TimeSnapshotMessageDelegate.Invoke(connection, reader, channelId);
+
+                    // message handler may disconnect client, making connection = null
+                    // therefore must check for null to avoid NRE.
+                    if (connection != null)
+                        connection.lastMessageTime = Time.time;
+                    return true;
+                }
+
                 // try to invoke the handler for that message
                 if (handlers.TryGetValue(msgType, out NetworkMessageDelegate handler))
                 {
@@ -494,6 +508,13 @@ namespace Mirror
             // it's not needed on client. it's always NetworkClient.connection.
             void HandlerWrapped(NetworkConnection _, T value) => handler(value);
             handlers[msgType] = NetworkMessages.WrapHandler((Action<NetworkConnection, T>)HandlerWrapped, requireAuthentication);
+
+
+            if (TimeSnapshotMessageID > 0 && msgType == NetworkMessageId<TimeSnapshotMessage>.Id)
+            {
+                TimeSnapshotMessageID = msgType;
+                TimeSnapshotMessageDelegate = handlers[msgType];
+            }
         }
 
         /// <summary>Replace a handler for a particular message type. Should require authentication by default.</summary>
