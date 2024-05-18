@@ -241,6 +241,13 @@ namespace Mirror
             UpdateScene();
         }
 
+        /// UNITYSTATION CODE ///
+        /// So we can applied map save stuff Before the network stuff so it ends up in the right state, Because if it was the other way then we would be overwriting networked stuff that has changed
+        public virtual void ObjectBeforePayloadDataClient(NetworkIdentity identity)
+        {
+
+        }
+
         // keep the online scene change check in a separate function.
         // only change scene if the requested online scene is not blank, and is not already loaded.
         bool IsServerOnlineSceneChangeNeeded() =>

@@ -1069,6 +1069,17 @@ namespace Mirror
             //    fixes: https://github.com/MirrorNetworking/Mirror/issues/3259
             InitializeIdentityFlags(identity);
 
+            /// UNITYSTATION CODE ///
+            ///  Try catch + So we can applied map save stuff Before the network stuff so it ends up in the right state, Because if it was the other way then we would be overwriting networked stuff that has changed
+            try
+            {
+                NetworkManager.singleton.ObjectBeforePayloadDataClient(identity);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError(e.ToString());
+            }
+
             // deserialize components if any payload
             // (Count is 0 if there were no components)
             if (message.payload.Count > 0)
