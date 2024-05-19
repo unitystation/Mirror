@@ -1458,7 +1458,8 @@ namespace Mirror
         // broadcast ///////////////////////////////////////////////////////////
         static void BroadcastTimeSnapshot()
         {
-            Send(new TimeSnapshotMessage(), Channels.Unreliable);
+            /// UNITYSTATION CODE /// This is completely unneeded since we don't need interpolation for objects and physics
+            //Send(new TimeSnapshotMessage(), Channels.Unreliable);
         }
 
         // make sure Broadcast() is only called every sendInterval.
