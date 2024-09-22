@@ -150,10 +150,18 @@ namespace Mirror
                 }
                 catch (Exception e)
                 {
+
                     /// UNITYSTATION CODE ///
                     Debug.LogError($" error processing message Reason: {e}");
                     if (NetworkServer.spawned.First().Value.isServer) //To prevent stupid disconnect from client having an error on their end
                     {
+                        Debug.LogError($"Disconnecting connId={conn.connectionId} to prevent exploits from an Exception in MessageHandler: {e.GetType().Name} {e.Message}\n{e.StackTrace}");
+
+#if UNITY_EDITOR
+                        Debug.LogError("This will cause a disconnect on the SERVER , Prevented for now");
+                        return;
+#endif
+
                         Debug.LogError($"Disconnecting connId={conn.connectionId} to prevent exploits from an Exception in MessageHandler: {e.GetType().Name} {e.Message}\n{e.StackTrace}");
                         conn.Disconnect();
                     }
