@@ -219,6 +219,8 @@ namespace Mirror
 #if UNITY_SERVER
             if (autoStartServerBuild)
             {
+ /// UNITYSTATION CODE ///
+ /// Since we need headless sever to have a connection to itself to keep message behaviour consistent between Hosting on a client vs Hosting headless
                 StartHost();
             }
             // only start server or client, never both
