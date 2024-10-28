@@ -219,7 +219,7 @@ namespace Mirror
 #if UNITY_SERVER
             if (autoStartServerBuild)
             {
-                StartServer();
+                StartHost();
             }
             // only start server or client, never both
             else if (autoConnectClientBuild)
