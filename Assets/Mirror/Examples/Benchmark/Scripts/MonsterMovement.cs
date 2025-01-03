@@ -5,7 +5,13 @@ namespace Mirror.Examples.Benchmark
     public class MonsterMovement : NetworkBehaviour
     {
         public float speed = 1;
-        public float movementProbability = 0.5f;
+
+        // movement probability:
+        // 0.5 is too high, monsters are moving almost all the time.
+        // only-sync-on-change shows no difference with 0.5 at all.
+        // in other words: broken change detection would be too easy to miss!
+        [Header("Note: use 0.1 to test change detection, 0.5 is too high!")]
+        public float movementProbability = 0.1f;
         public float movementDistance = 20;
 
         bool moving;
@@ -24,6 +30,7 @@ namespace Mirror.Examples.Benchmark
             {
                 if (Vector3.Distance(transform.position, destination) <= 0.01f)
                 {
+                    transform.position = destination;
                     moving = false;
                 }
                 else

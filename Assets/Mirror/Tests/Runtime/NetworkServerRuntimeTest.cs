@@ -39,11 +39,11 @@ namespace Mirror.Tests.Runtime
             // create spawned player
             CreateNetworkedAndSpawnPlayer(out GameObject player, out _, NetworkServer.localConnection);
 
-            // remove player for connection, wait 1 frame to unspawn
-            NetworkServer.RemovePlayerForConnection(NetworkServer.localConnection, false);
+            // remove player for connection, wait 1 frame for ownership removal
+            NetworkServer.RemovePlayerForConnection(NetworkServer.localConnection, RemovePlayerOptions.KeepActive);
             yield return null;
 
-            Assert.That(player, Is.Not.Null, "Player should be not be destroyed");
+            Assert.That(player, Is.Not.Null, "Player should not be destroyed");
             Assert.That(NetworkServer.localConnection.identity == null, "identity should be null");
 
             // respawn player
@@ -84,6 +84,32 @@ namespace Mirror.Tests.Runtime
             return identity1;
         }
 
+        [UnityTest]
+        public IEnumerator DisconnectTimeoutTest()
+        {
+            // Set low ping frequency so no NetworkPingMessage is generated
+            NetworkTime.PingInterval = 5f;
+
+            // Set a short timeout for this test and enable disconnectInactiveConnections
+            NetworkServer.disconnectInactiveConnections = true;
+            NetworkServer.disconnectInactiveTimeout = 1;
+
+            GameObject remotePlayer = new GameObject("RemotePlayer", typeof(NetworkIdentity));
+            NetworkConnectionToClient remoteConnection = new NetworkConnectionToClient(1);
+            NetworkServer.OnConnected(remoteConnection);
+            NetworkServer.AddPlayerForConnection(remoteConnection, remotePlayer);
+
+            // There's a host player from HostSetup + remotePlayer
+            Assert.That(NetworkServer.connections.Count, Is.EqualTo(2));
+
+            // wait 2 seconds for remoteConnection to timeout as idle
+            yield return new WaitForSeconds(2f);
+
+            // host client connection should still be alive
+            Assert.That(NetworkServer.connections.Count, Is.EqualTo(1));
+            Assert.That(NetworkServer.localConnection, Is.Not.Null);
+        }
+
         [Test]
         public void Shutdown_DisablesAllSpawnedPrefabs()
         {
@@ -104,7 +130,7 @@ namespace Mirror.Tests.Runtime
             Assert.IsTrue(identity1 != null);
             Assert.IsTrue(identity2 != null);
             Assert.IsFalse(identity1.gameObject.activeSelf);
-            Assert.IsFalse(identity1.gameObject.activeSelf);
+            Assert.IsFalse(identity2.gameObject.activeSelf);
 
             Assert.That(NetworkServer.spawned, Is.Empty);
         }

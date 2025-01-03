@@ -13,18 +13,9 @@ namespace Mirror.Examples.NetworkRoom
         [Header("Spawner Setup")]
         [Tooltip("Reward Prefab for the Spawner")]
         public GameObject rewardPrefab;
+        public byte poolSize = 10;
 
-        public static new NetworkRoomManagerExt singleton { get; private set; }
-
-        /// <summary>
-        /// Runs on both Server and Client
-        /// Networking is NOT initialized when this fires
-        /// </summary>
-        public override void Awake()
-        {
-            base.Awake();
-            singleton = this;
-        }
+        public static new NetworkRoomManagerExt singleton => NetworkManager.singleton as NetworkRoomManagerExt;
 
         /// <summary>
         /// This is called on the server when a networked scene finishes loading.
@@ -34,7 +25,24 @@ namespace Mirror.Examples.NetworkRoom
         {
             // spawn the initial batch of Rewards
             if (sceneName == GameplayScene)
+            {
+                Spawner.InitializePool(rewardPrefab, poolSize);
                 Spawner.InitialSpawn();
+            }
+            else
+                Spawner.ClearPool();
+        }
+
+        public override void OnRoomClientSceneChanged()
+        {
+            // Don't initialize the pool for host client because it's
+            // already initialized in OnRoomServerSceneChanged
+            if (NetworkServer.active) return;
+
+            if (networkSceneName == GameplayScene)
+                Spawner.InitializePool(rewardPrefab, poolSize);
+            else
+                Spawner.ClearPool();
         }
 
         /// <summary>
@@ -76,11 +84,14 @@ namespace Mirror.Examples.NetworkRoom
         public override void OnRoomServerPlayersReady()
         {
             // calling the base method calls ServerChangeScene as soon as all players are in Ready state.
-#if UNITY_SERVER
-            base.OnRoomServerPlayersReady();
-#else
-            showStartButton = true;
-#endif
+            if (Utils.IsHeadless())
+            {
+                base.OnRoomServerPlayersReady();
+            }
+            else
+            {
+                showStartButton = true;
+            }
         }
 
         public override void OnGUI()

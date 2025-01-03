@@ -2,52 +2,64 @@ using UnityEngine;
 
 namespace Mirror.Examples.NetworkRoom
 {
-    [RequireComponent(typeof(RandomColor))]
+    [AddComponentMenu("")]
+    [RequireComponent(typeof(Common.RandomColor))]
     public class Reward : NetworkBehaviour
     {
-        public bool available = true;
-        public RandomColor randomColor;
+        [Header("Components")]
+        public Common.RandomColor randomColor;
 
-        void OnValidate()
+        [Header("Diagnostics")]
+        [ReadOnly, SerializeField]
+        bool available;
+
+        protected override void OnValidate()
         {
+            if (Application.isPlaying) return;
+
+            base.OnValidate();
+            Reset();
+        }
+
+        void Reset()
+        {
+            // Default position out of reach
+            transform.position = new Vector3(0, -1000, 0);
+
             if (randomColor == null)
-                randomColor = GetComponent<RandomColor>();
+                randomColor = GetComponent<Common.RandomColor>();
+        }
+
+        public override void OnStartServer()
+        {
+            available = true;
         }
 
         [ServerCallback]
         void OnTriggerEnter(Collider other)
         {
-            if (other.gameObject.CompareTag("Player"))
-                ClaimPrize(other.gameObject);
-        }
+            // Don't process collisions when it's in the pool
+            if (!gameObject.activeSelf) return;
 
-        // This is called from PlayerController.CmdClaimPrize which is invoked by PlayerController.OnControllerColliderHit
-        // This only runs on the server
-        [ServerCallback]
-        public void ClaimPrize(GameObject player)
-        {
-            if (available)
-            {
-                // This is a fast switch to prevent two players claiming the prize in a bang-bang close contest for it.
-                // First hit turns it off, pending the object being destroyed a few frames later.
-                available = false;
+            // Set up physics layers to prevent this from being called by non-players
+            // and eliminate the need for a tag check here.
+            if (!other.CompareTag("Player")) return;
 
-                Color32 color = randomColor.color;
+            // This is a fast switch to prevent two players claiming the reward in a bang-bang close contest for it.
+            // First to trigger turns it off, pending the object being destroyed a few frames later.
+            if (!available)
+                return;
 
-                // calculate the points from the color ... lighter scores higher as the average approaches 255
-                // UnityEngine.Color RGB values are float fractions of 255
-                uint points = (uint)(((color.r) + (color.g) + (color.b)) / 3);
-                //Debug.Log($"Scored {points} points R:{color.r} G:{color.g} B:{color.b}");
+            available = false;
 
-                // award the points via SyncVar on the PlayerController
-                player.GetComponent<PlayerScore>().score += points;
+            // Calculate the points from the color...lighter scores higher as the average approaches 255
+            // UnityEngine.Color RGB values are byte 0 to 255
+            uint points = (uint)((randomColor.color.r + randomColor.color.g + randomColor.color.b) / 3);
 
-                // spawn a replacement
-                Spawner.SpawnReward();
+            // award the points via SyncVar on Player's PlayerScore
+            other.GetComponent<PlayerScore>().score += points;
 
-                // destroy this one
-                NetworkServer.Destroy(gameObject);
-            }
+            Spawner.RecycleReward(gameObject);
         }
     }
 }
