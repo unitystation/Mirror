@@ -148,6 +148,8 @@ namespace Mirror
 
                     // if it is a value type, just use default(T)
                     // otherwise allocate a new instance
+                    Debug.LogError(  " Reading >  "  +  typeof(T).FullName);
+
                     message = reader.Read<T>();
                 }
                 catch (Exception exception)
