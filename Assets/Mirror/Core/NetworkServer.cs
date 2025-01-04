@@ -1239,13 +1239,6 @@ namespace Mirror
                     Destroy(previousPlayer.gameObject);
                     break;
             }
-            /// UNITYSTATION CODE ///
-            // Add nullcheck. TODO: explanation
-            else if (previousPlayer != null)
-            {
-                // This clears both isLocalPlayer and hasAuthority on client
-                previousPlayer.RemoveClientAuthority();
-            }
 
             return true;
         }
@@ -1980,10 +1973,10 @@ namespace Mirror
 						connection.Send(message);
 					}
 				}
-				catch ( exception  ex){
+				catch ( Exception  ex){
 					Debug.LogError( " dirty observing had null " );
 				}
-                
+
                 connection.DirtyObserving[i] = null;
             }
         }

@@ -544,7 +544,7 @@ namespace Mirror
         /// <summary>Register a handler for a message type T. Most should require authentication.</summary>
         // Deprecated 2021-03-13
         [Obsolete("Use RegisterHandler<T> version without NetworkConnection parameter. It always points to NetworkClient.connection anyway.")]
-        public static void RegisterHandler<T>(Action<NetworkConnection, T> handler, bool requireAuthentication = true)
+        public static void RegisterHandler<T>(Action<NetworkConnection, T> handler, bool requireAuthentication = true, bool exceptionsDisconnect = true)
             where T : struct, NetworkMessage
         {
             ushort msgType = NetworkMessages.GetId<T>();
@@ -552,7 +552,7 @@ namespace Mirror
             {
                 Debug.LogWarning($"NetworkClient.RegisterHandler replacing handler for {typeof(T).FullName}, id={msgType}. If replacement is intentional, use ReplaceHandler instead to avoid this warning.");
             }
-            handlers[msgType] = NetworkMessages.WrapHandler(handler, requireAuthentication);
+            handlers[msgType] = NetworkMessages.WrapHandler(handler, requireAuthentication, exceptionsDisconnect);
         }
 
         /// <summary>Register a handler for a message type T. Most should require authentication.</summary>

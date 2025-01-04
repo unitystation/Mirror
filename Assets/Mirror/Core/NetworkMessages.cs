@@ -190,13 +190,13 @@ namespace Mirror
                 catch (Exception exception)
                 {
                     /// UNITYSTATION CODE /// //To prevent stupid disconnect from client having an error on their end
-                    Debug.LogError($" error processing message Reason: {e}");
-                    if (NetworkServer.spawned.First().Value.isServer) 
+                    Debug.LogError($" error processing message Reason: {exception}");
+                    if (NetworkServer.spawned.First().Value.isServer)
                     {
 						// should we disconnect on exceptions?
 						if (exceptionsDisconnect)
 						{
-							Debug.LogError($"Disconnecting connection: {conn} because handling a message of type {typeof(T)} caused an Exception. This can happen if the other side accidentally (or an attacker intentionally) sent invalid data. Reason: {exception}");						
+							Debug.LogError($"Disconnecting connection: {conn} because handling a message of type {typeof(T)} caused an Exception. This can happen if the other side accidentally (or an attacker intentionally) sent invalid data. Reason: {exception}");
 #if UNITY_EDITOR
 							Debug.LogError("This will cause a disconnect on the SERVER , Prevented for now");
 							return;
