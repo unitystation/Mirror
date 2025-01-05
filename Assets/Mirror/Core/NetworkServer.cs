@@ -2019,9 +2019,10 @@ namespace Mirror
             connectionsCopy.Clear();
             connections.Values.CopyTo(connectionsCopy);
 
+            //CUSTOM UNITYSTATION CODE// Cashs Time.frameCount and Parallel loop instead of for loop
             FrameCountCash = Time.frameCount;
             ApplicationIsPlayingCash = Application.isPlaying;
-            //CUSTOM UNITYSTATION CODE// Cashs Time.frameCount and Parallel loop instead of for loop
+            NetworkTime._localTime = Time.unscaledTimeAsDouble;
             Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
         }
 

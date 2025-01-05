@@ -35,6 +35,7 @@ namespace Mirror
         /// <summary>Returns double precision clock time _in this system_, unaffected by the network.</summary>
 
 #if UNITY_2020_3_OR_NEWER
+        //CUSTOM UNITYSTATION CODE// It needs to be cashed because we can't access it from threaded instance
         public static double _localTime;
 
         public static double localTime
