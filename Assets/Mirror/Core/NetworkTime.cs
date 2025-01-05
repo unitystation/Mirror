@@ -35,13 +35,15 @@ namespace Mirror
         /// <summary>Returns double precision clock time _in this system_, unaffected by the network.</summary>
 
 #if UNITY_2020_3_OR_NEWER
+        public static double _localTime;
+
         public static double localTime
         {
             // NetworkTime uses unscaled time and ignores Time.timeScale.
             // fixes Time.timeScale getting server & client time out of sync:
             // https://github.com/MirrorNetworking/Mirror/issues/3409
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => Time.unscaledTimeAsDouble;
+            get => _localTime;
         }
 #else
         // need stopwatch for older Unity versions, but it's quite slow.
