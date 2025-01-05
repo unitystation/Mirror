@@ -1674,7 +1674,7 @@ namespace Mirror
             if (NetworkServer.active) return;
 
             // send time snapshot every sendInterval.
-            //Send(new TimeSnapshotMessage(), Channels.Unreliable);
+            Send(new TimeSnapshotMessage(), Channels.Unreliable);
 
             // broadcast client state to server
             BroadcastToServer();
