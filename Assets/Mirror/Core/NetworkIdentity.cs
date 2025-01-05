@@ -1002,6 +1002,9 @@ namespace Mirror
             ValidateComponents();
             NetworkBehaviour[] components = NetworkBehaviours;
 
+            /// UNITYSTATION CODE /// So it's marked as cleared so it can be readded to Dirty array
+            _isDirty = false;
+
             // check which components are dirty for owner / observers.
             // this is quite complicated with SyncMode + SyncDirection.
             // see the function for explanation.
@@ -1223,38 +1226,11 @@ namespace Mirror
 					// set tick
 					lastSerialization.tick = tick;
 					//Debug.Log($"{name} (netId={netId}) serialized for tick={tickTimeStamp}");
-
-					/// UNITYSTATION CODE ///  ???
-                    //ClearDirtyComponentsDirtyBits();
                 }
             }
 
             // return it
             return lastSerialization;
-        }
-
-
-        // Clear only dirty component's dirty bits. ignores components which
-        // may be dirty but not ready to be synced yet (because of syncInterval)
-        //
-        // NOTE: this used to be very important to avoid ever
-        //       growing SyncList changes if they had no observers,
-        //       but we've added SyncObject.isRecording since.
-        internal void ClearDirtyComponentsDirtyBits()
-        {
-            foreach (NetworkBehaviour comp in NetworkBehaviours)
-            {
-                /// UNITYSTATION CODE /// Saves a bit of performance comp.IsDirty() == True
-                comp.ClearAllDirtyBits();
-
-                // if (comp.IsDirty())
-                // {
-                // comp.ClearAllDirtyBits();
-                // }
-            }
-
-            /// UNITYSTATION CODE ///
-            _isDirty = false;
         }
 
 
