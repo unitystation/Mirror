@@ -2022,7 +2022,6 @@ namespace Mirror
             //CUSTOM UNITYSTATION CODE// Cashs Time.frameCount and Parallel loop instead of for loop
             FrameCountCash = Time.frameCount;
             ApplicationIsPlayingCash = Application.isPlaying;
-            NetworkTime._localTime = Time.unscaledTimeAsDouble;
             Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
         }
 

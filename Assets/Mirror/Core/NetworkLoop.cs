@@ -203,6 +203,9 @@ namespace Mirror
 
             //Debug.Log($"NetworkLateUpdate {Time.time}");
             // invoke event before mirror does its final late updating.
+            ///CUSTOM UNITYSTATION CODE/// Sets time, Due to threading shenanigans
+            NetworkTime._localTime = Time.unscaledTimeAsDouble;
+
             OnLateUpdate?.Invoke();
             NetworkServer.NetworkLateUpdate();
             NetworkClient.NetworkLateUpdate();
