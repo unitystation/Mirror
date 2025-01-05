@@ -187,6 +187,7 @@ namespace Mirror
             // however, we only want to call NetworkServer/Client in play mode.
             if (!Application.isPlaying) return;
 
+            NetworkTime.EarlyUpdate();
             //Debug.Log($"NetworkEarlyUpdate {Time.time}");
             NetworkServer.NetworkEarlyUpdate();
             NetworkClient.NetworkEarlyUpdate();
@@ -202,6 +203,9 @@ namespace Mirror
 
             //Debug.Log($"NetworkLateUpdate {Time.time}");
             // invoke event before mirror does its final late updating.
+            ///CUSTOM UNITYSTATION CODE/// Sets time, Due to threading shenanigans
+            NetworkTime._localTime = Time.unscaledTimeAsDouble;
+
             OnLateUpdate?.Invoke();
             NetworkServer.NetworkLateUpdate();
             NetworkClient.NetworkLateUpdate();

@@ -3,6 +3,20 @@ name: Main
 on:
   workflow_dispatch:
   pull_request:
+    branches:
+    - master
+    paths-ignore:
+      - 'Packages/**'
+      - 'ProjectSettings/**'
+      - '.github/**'
+      - '.gitattributes'
+      - '.gitignore'
+      - '.editorconfig'
+      - 'LICENSE'
+      - '**.md'
+      - '**.yml'
+      - '**.txt'
+      - '**.ps1'
   push:
     branches:
     - master
@@ -14,10 +28,10 @@ on:
       - '.gitignore'
       - '.editorconfig'
       - 'LICENSE'
-      - '*.md'
-      - '*.yml'
-      - '*.txt'
-      - '*.ps1'
+      - '**.md'
+      - '**.yml'
+      - '**.txt'
+      - '**.ps1'
   
 jobs:
   RunUnityTests:
@@ -37,3 +51,13 @@ jobs:
     needs: RunUnityTests
     uses: ./.github/workflows/Semantic.yml
     secrets: inherit
+
+  DeleteOldWorkflowRuns:
+    name: Delete Old Workflow Runs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          retain_days: 15       # Delete runs older than 15 days
+          keep_minimum_runs: 5  # Keep the last 5 runs

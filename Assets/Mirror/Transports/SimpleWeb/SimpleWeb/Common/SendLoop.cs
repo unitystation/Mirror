@@ -59,9 +59,8 @@ namespace Mirror.SimpleWeb
                     conn.sendPending.Wait();
                     // wait for 1ms for mirror to send other messages
                     if (SendLoopConfig.sleepBeforeSend)
-                    {
                         Thread.Sleep(1);
-                    }
+
                     conn.sendPending.Reset();
 
                     if (SendLoopConfig.batchSend)
@@ -72,7 +71,7 @@ namespace Mirror.SimpleWeb
                             // check if connected before sending message
                             if (!client.Connected)
                             {
-                                Log.Info($"[SimpleWebTransport] SendLoop {conn} not connected");
+                                Log.Verbose("[SWT-SendLoop]: SendLoop {0} not connected", conn);
                                 msg.Release();
                                 return;
                             }
@@ -102,7 +101,7 @@ namespace Mirror.SimpleWeb
                             // check if connected before sending message
                             if (!client.Connected)
                             {
-                                Log.Info($"[SimpleWebTransport] SendLoop {conn} not connected");
+                                Log.Verbose("[SWT-SendLoop]: SendLoop {0} not connected", conn);
                                 msg.Release();
                                 return;
                             }
@@ -114,14 +113,11 @@ namespace Mirror.SimpleWeb
                     }
                 }
 
-                Log.Info($"[SimpleWebTransport] {conn} Not Connected");
+                Log.Verbose("[SWT-SendLoop]: {0} Not Connected", conn);
             }
             catch (ThreadInterruptedException e) { Log.InfoException(e); }
-            catch (ThreadAbortException e) { Log.InfoException(e); }
-            catch (Exception e)
-            {
-                Log.Exception(e);
-            }
+            catch (ThreadAbortException) { Log.Error("[SWT-SendLoop]: Thread Abort Exception"); }
+            catch (Exception e) { Log.Exception(e); }
             finally
             {
                 Profiler.EndThreadProfiling();
@@ -145,7 +141,7 @@ namespace Mirror.SimpleWeb
             offset += msgLength;
 
             // dump before mask on
-            Log.DumpBuffer("[SimpleWebTransport] Send", buffer, startOffset, offset);
+            Log.DumpBuffer("[SWT-SendLoop]: Send", buffer, startOffset, offset);
 
             if (setMask)
             {
@@ -194,9 +190,7 @@ namespace Mirror.SimpleWeb
             }
 
             if (setMask)
-            {
                 buffer[startOffset + 1] |= 0b1000_0000;
-            }
 
             return sendLength + startOffset;
         }

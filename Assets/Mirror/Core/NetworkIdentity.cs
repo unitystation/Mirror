@@ -29,6 +29,12 @@ namespace Mirror
         public int tick;
         public NetworkWriter ownerWriter;
         public NetworkWriter observersWriter;
+
+        public void ResetWriters()
+        {
+            ownerWriter.Position = 0;
+            observersWriter.Position = 0;
+        }
     }
 
     /// <summary>NetworkIdentity identifies objects across the network.</summary>
@@ -126,9 +132,8 @@ namespace Mirror
         // for example: main player & pets are owned. monsters & npcs aren't.
         public bool isOwned { get; internal set; }
 
-        // Deprecated 2022-10-13
-        [Obsolete(".hasAuthority was renamed to .isOwned. This is easier to understand and prepares for SyncDirection, where there is a difference betwen isOwned and authority.")]
-        public bool hasAuthority => isOwned;
+        // internal so NetworkManager can reset it from StopClient.
+        internal bool clientStarted;
 
         /// <summary>The set of network connections (players) that can see this object.</summary>
         public readonly Dictionary<int, NetworkConnectionToClient> observers =
@@ -148,7 +153,7 @@ namespace Mirror
         //
         // it's also easier to work with for serialization etc.
         // serialized and visible in inspector for easier debugging
-        [SerializeField] uint _assetId;
+        [SerializeField, HideInInspector] uint _assetId;
 
         // The AssetId trick:
         //   Ideally we would have a serialized 'Guid m_AssetId' but Unity can't
@@ -231,10 +236,9 @@ namespace Mirror
         // ForceHidden = useful to hide monsters while they respawn etc.
         // ForceShown = useful to have score NetworkIdentities that always broadcast
         //              to everyone etc.
-        //
-        // TODO rename to 'visibility' after removing .visibility some day!
         [Tooltip("Visibility can overwrite interest management. ForceHidden can be useful to hide monsters while they respawn. ForceShown can be useful for score NetworkIdentities that should always broadcast to everyone in the world.")]
-        public Visibility visible = Visibility.Default;
+        [FormerlySerializedAs("visible")]
+        public Visibility visibility = Visibility.Default;
 
         // broadcasting serializes all entities around a player for each player.
         // we don't want to serialize one entity twice in the same tick.
@@ -325,9 +329,12 @@ namespace Mirror
         // BUT internal so tests can add them after creating the NetworkIdentity
         internal void InitializeNetworkBehaviours()
         {
-            // Get all NetworkBehaviours
-            // (never null. GetComponents returns [] if none found)
-            NetworkBehaviours = GetComponents<NetworkBehaviour>();
+            // Get all NetworkBehaviour components, including children.
+            // Some users need NetworkTransform on child bones, etc.
+            // => Deterministic: https://forum.unity.com/threads/getcomponentsinchildren.4582/#post-33983
+            // => Never null. GetComponents returns [] if none found.
+            // => Include inactive. We need all child components.
+            NetworkBehaviours = GetComponentsInChildren<NetworkBehaviour>(true);
             ValidateComponents();
 
             // initialize each one
@@ -396,18 +403,56 @@ namespace Mirror
             hasSpawned = false;
 
 #if UNITY_EDITOR
+            DisallowChildNetworkIdentities();
             SetupIDs();
 #endif
         }
 
+        // expose our AssetId Guid to uint mapping code in case projects need to map Guids to uint as well.
+        // this way their projects won't break if we change our mapping algorithm.
+        // needs to be available at runtime / builds, don't wrap in #if UNITY_EDITOR
+        public static uint AssetGuidToUint(Guid guid) => (uint)guid.GetHashCode(); // deterministic
+
 #if UNITY_EDITOR
+        // child NetworkIdentities are not supported.
+        // Disallow them and show an error for the user to fix.
+        // This needs to work for Prefabs & Scene objects, so the previous check
+        // in NetworkClient.RegisterPrefab is not enough.
+        void DisallowChildNetworkIdentities()
+        {
+#if UNITY_2020_3_OR_NEWER
+            NetworkIdentity[] identities = GetComponentsInChildren<NetworkIdentity>(true);
+#else
+            NetworkIdentity[] identities = GetComponentsInChildren<NetworkIdentity>();
+#endif
+            if (identities.Length > 1)
+            {
+                // always log the next child component so it's easy to fix.
+                // if there are multiple, then after removing it'll log the next.
+                Debug.LogError($"'{name}' has another NetworkIdentity component on '{identities[1].name}'. There should only be one NetworkIdentity, and it must be on the root object. Please remove the other one.", this);
+            }
+        }
+
         void AssignAssetID(string path)
         {
             // only set if not empty. fixes https://github.com/vis2k/Mirror/issues/2765
             if (!string.IsNullOrWhiteSpace(path))
             {
+                // if we generate the assetId then we MUST be sure to set dirty
+                // in order to save the prefab object properly. otherwise it
+                // would be regenerated every time we reopen the prefab.
+                // -> Undo.RecordObject is the new EditorUtility.SetDirty!
+                // -> we need to call it before changing.
+                //
+                // to verify this, duplicate a prefab and double click to open it.
+                // add a log message if "_assetId != before_".
+                // without RecordObject, it'll log every time because it's not saved.
+                Undo.RecordObject(this, "Assigned AssetId");
+
+                // uint before = _assetId;
                 Guid guid = new Guid(AssetDatabase.AssetPathToGUID(path));
-                assetId = (uint)guid.GetHashCode(); // deterministic
+                assetId = AssetGuidToUint(guid);
+                // if (_assetId != before) Debug.Log($"Assigned assetId={assetId} to {name}");
             }
         }
 
@@ -688,8 +733,30 @@ namespace Mirror
 
                 // if an identity is still in .spawned, remove it too.
                 // fixes: https://github.com/MirrorNetworking/Mirror/issues/3324
-                NetworkClient.spawned.Remove(netId);
+                //
+                // however, verify that spawned[netId] is this NetworkIdentity
+                // fixes: https://github.com/MirrorNetworking/Mirror/issues/3785
+                // - server: netId=42 walks out of and back into AOI range in same frame
+                // - client frame 1:
+                //     on_destroymsg(42) -> NetworkClient.DestroyObject -> GameObject.Destroy(42) // next frame
+                //     on_spawnmsg(42) -> NetworkClient.SpawnPrefab -> Instantiate(42) -> spawned[42]=new_identity
+                // - client frame 2:
+                //     Unity destroys the old 42
+                //     NetworkIdentity.OnDestroy removes .spawned[42] which is new_identity not old_identity
+                //     new_identity becomes orphaned
+                //
+                // solution: only remove if spawned[netId] is this NetworkIdentity or null
+                if (NetworkClient.spawned.TryGetValue(netId, out NetworkIdentity entry))
+                {
+                    if (entry == this || entry == null)
+                        NetworkClient.spawned.Remove(netId);
+                }
             }
+
+            // workaround for cyclid NI<->NB reference causing memory leaks
+            // after Destroy. [Credits: BigBoxVR/R.S.]
+            // TODO report this to Unity!
+            this.NetworkBehaviours = null;
         }
 
         internal void OnStartServer()
@@ -732,7 +799,6 @@ namespace Mirror
             }
         }
 
-        bool clientStarted;
         internal void OnStartClient()
         {
             if (clientStarted) return;
@@ -859,9 +925,9 @@ namespace Mirror
             for (int i = 0; i < components.Length; ++i)
             {
                 NetworkBehaviour component = components[i];
+                ulong nthBit = 1ul << i;
 
                 bool dirty = component.IsDirty();
-                ulong nthBit = (1u << i);
 
                 // owner needs to be considered for both SyncModes, because
                 // Observers mode always includes the Owner.
@@ -872,14 +938,17 @@ namespace Mirror
                 if (initialState || (component.syncDirection == SyncDirection.ServerToClient && dirty))
                     ownerMask |= nthBit;
 
-                // observers need to be considered only in Observers mode
-                //
-                // for initial, it should always sync to observers.
-                // for delta, only if dirty.
-                // SyncDirection is irrelevant, as both are broadcast to
-                // observers which aren't the owner.
-                if (component.syncMode == SyncMode.Observers && (initialState || dirty))
-                    observerMask |= nthBit;
+                // observers need to be considered only in Observers mode,
+                // otherwise they receive no sync data of this component ever.
+                if (component.syncMode == SyncMode.Observers)
+                {
+                    // for initial, it should always sync to observers.
+                    // for delta, only if dirty.
+                    // SyncDirection is irrelevant, as both are broadcast to
+                    // observers which aren't the owner.
+                    if (initialState || dirty)
+                        observerMask |= nthBit;
+                }
             }
 
             return (ownerMask, observerMask);
@@ -903,11 +972,13 @@ namespace Mirror
 
                 // on client, only consider owned components with SyncDirection to server
                 NetworkBehaviour component = components[i];
+                ulong nthBit = 1ul << i;
+
                 if (isOwned && component.syncDirection == SyncDirection.ClientToServer)
                 {
                     // set the n-th bit if dirty
                     // shifting from small to large numbers is varint-efficient.
-                    if (component.IsDirty()) mask |= (1u << i);
+                    if (component.IsDirty()) mask |= nthBit;
                 }
             }
 
@@ -919,19 +990,20 @@ namespace Mirror
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static bool IsDirty(ulong mask, int index)
         {
-            ulong nthBit = (ulong)(1 << index);
+            ulong nthBit = 1ul << index;
             return (mask & nthBit) != 0;
         }
 
         // serialize components into writer on the server.
         // check ownerWritten/observersWritten to know if anything was written
-        // We pass dirtyComponentsMask into this function so that we can check
-        // if any Components are dirty before creating writers
         internal void SerializeServer(bool initialState, NetworkWriter ownerWriter, NetworkWriter observersWriter)
         {
             // ensure NetworkBehaviours are valid before usage
             ValidateComponents();
             NetworkBehaviour[] components = NetworkBehaviours;
+
+            /// UNITYSTATION CODE /// So it's marked as cleared so it can be readded to Dirty array
+            _isDirty = false;
 
             // check which components are dirty for owner / observers.
             // this is quite complicated with SyncMode + SyncDirection.
@@ -981,6 +1053,19 @@ namespace Mirror
                             if (ownerDirty) ownerWriter.WriteBytes(segment.Array, segment.Offset, segment.Count);
                             if (observersDirty) observersWriter.WriteBytes(segment.Array, segment.Offset, segment.Count);
                         }
+
+                        // clear dirty bits for the components that we serialized.
+                        // do not clear for _all_ components, only the ones that
+                        // were dirty and had their syncInterval elapsed.
+                        //
+                        // we don't want to clear bits before the syncInterval
+                        // was elapsed, as then they wouldn't be synced.
+                        //
+                        // only clear for delta, not for full (spawn messages).
+                        // otherwise if a player joins, we serialize monster,
+                        // and shouldn't clear dirty bits not yet synced to
+                        // other players.
+                        if (!initialState) comp.ClearAllDirtyBits();
                     }
                 }
             }
@@ -1030,6 +1115,14 @@ namespace Mirror
                         // serialize into writer.
                         // server always knows initialState, we never need to send it
                         comp.Serialize(writer, false);
+
+                        // clear dirty bits for the components that we serialized.
+                        // do not clear for _all_ components, only the ones that
+                        // were dirty and had their syncInterval elapsed.
+                        //
+                        // we don't want to clear bits before the syncInterval
+                        // was elapsed, as then they wouldn't be synced.
+                        comp.ClearAllDirtyBits();
                     }
                 }
             }
@@ -1105,6 +1198,7 @@ namespace Mirror
         // get cached serialization for this tick (or serialize if none yet).
         // IMPORTANT: int tick avoids floating point inaccuracy over days/weeks.
         // calls SerializeServer, so this function is to be called on server.
+		/// UNITYSTATION CODE /// needs lock
         internal NetworkIdentitySerialization GetServerSerializationAtTick(int tick)
         {
             // only rebuild serialization once per tick. reuse otherwise.
@@ -1121,41 +1215,17 @@ namespace Mirror
 #endif
                    )
                 {
-                    // reset
-                    lastSerialization.ownerWriter.Position = 0;
-                    lastSerialization.observersWriter.Position = 0;
+                      // reset
+					lastSerialization.ResetWriters();
 
                     // serialize
                     SerializeServer(false,
                         lastSerialization.ownerWriter,
                         lastSerialization.observersWriter);
 
-                    // clear dirty bits for the components that we serialized.
-                    // previously we did this in NetworkServer.BroadcastToConnection
-                    // for every connection, for every entity.
-                    // but we only serialize each entity once, right here in this
-                    // 'lastSerialization.tick != tick' scope.
-                    // so only do it once.
-                    //
-                    // NOTE: not in Serializell as that should only do one
-                    //       thing: serialize data.
-                    //
-                    //
-                    // NOTE: DO NOT clear ALL component's dirty bits, because
-                    //       components can have different syncIntervals and we
-                    //       don't want to reset dirty bits for the ones that were
-                    //       not synced yet.
-                    //
-                    // NOTE: this used to be very important to avoid ever growing
-                    //       SyncList changes if they had no observers, but we've
-                    //       added SyncObject.isRecording since.
-
-
-                    // set tick
-                    lastSerialization.tick = tick;
-                    //Debug.Log($"{name} (netId={netId}) serialized for tick={tickTimeStamp}");
-
-                    ClearDirtyComponentsDirtyBits();
+					// set tick
+					lastSerialization.tick = tick;
+					//Debug.Log($"{name} (netId={netId}) serialized for tick={tickTimeStamp}");
                 }
             }
 
@@ -1163,28 +1233,6 @@ namespace Mirror
             return lastSerialization;
         }
 
-        // Clear only dirty component's dirty bits. ignores components which
-        // may be dirty but not ready to be synced yet (because of syncInterval)
-        //
-        // NOTE: this used to be very important to avoid ever
-        //       growing SyncList changes if they had no observers,
-        //       but we've added SyncObject.isRecording since.
-        internal void ClearDirtyComponentsDirtyBits()
-        {
-            foreach (NetworkBehaviour comp in NetworkBehaviours)
-            {
-                /// UNITYSTATION CODE /// Saves a bit of performance comp.IsDirty() == True
-                comp.ClearAllDirtyBits();
-
-                // if (comp.IsDirty())
-                // {
-                // comp.ClearAllDirtyBits();
-                // }
-            }
-
-            /// UNITYSTATION CODE ///
-            _isDirty = false;
-        }
 
         internal void AddObserver(NetworkConnectionToClient conn)
         {
@@ -1345,7 +1393,7 @@ namespace Mirror
         // the identity during destroy as people might want to be able to read
         // the members inside OnDestroy(), and we have no way of invoking reset
         // after OnDestroy is called.
-        internal void Reset()
+        internal void ResetState()
         {
             hasSpawned = false;
             clientStarted = false;
