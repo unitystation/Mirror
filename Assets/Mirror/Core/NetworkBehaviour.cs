@@ -6,6 +6,11 @@ using UnityEngine;
 
 namespace Mirror
 {
+    // SyncMethod to choose between:
+    //   * Reliable: oldschool reliable sync every syncInterval. If nothing changes, nothing is sent.
+    //   * Hybrid: quake style unreliable sync ('hybrid' to make it scale).
+    public enum SyncMethod { Reliable, Hybrid }
+
     // SyncMode decides if a component is synced to all observers, or only owner
     public enum SyncMode { Observers, Owner }
 
@@ -24,6 +29,9 @@ namespace Mirror
     [HelpURL("https://mirror-networking.gitbook.io/docs/guides/networkbehaviour")]
     public abstract class NetworkBehaviour : MonoBehaviour
     {
+        [Tooltip("Choose between:\n- Reliable: only sends when changed. Recommended for most games!\n- Unreliable: immediately sends at the expense of bandwidth. Only for hardcore competitive games.\nClick the Help icon for full details.")]
+        [HideInInspector] public SyncMethod syncMethod = SyncMethod.Reliable;
+
         /// <summary>Sync direction for OnSerialize. ServerToClient by default. ClientToServer for client authority.</summary>
         [Tooltip("Server Authority calls OnSerialize on the server and syncs it to clients.\n\nClient Authority calls OnSerialize on the owning client, syncs it to server, which then broadcasts it to all other clients.\n\nUse server authority for cheat safety.")]
         public SyncDirection syncDirection = SyncDirection.ServerToClient;
@@ -236,18 +244,24 @@ namespace Mirror
             //TODO Investigate putting is dirty on individual network behaviours, To reduce network usage
             //Even down to the individual syncVar? vs Performance
             true;
-            // check bits first. this is basically free.
-            //(syncVarDirtyBits | syncObjectDirtyBits) != 0UL &&
-            // only check time if bits were dirty. this is more expensive.
-            //NetworkTime.localTime - lastSyncTime >= syncInterval;
+        // check bits first. this is basically free.
+        //(syncVarDirtyBits | syncObjectDirtyBits) != 0UL &&
+        // only check time if bits were dirty. this is more expensive.
+        //NetworkTime.localTime - lastSyncTime >= syncInterval;
+
+        // true if any SyncVar or SyncObject is dirty
+        // OR both bitmasks. != 0 if either was dirty.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool IsDirty_BitsOnly() => (syncVarDirtyBits | syncObjectDirtyBits) != 0UL;
 
         /// <summary>Clears all the dirty bits that were set by SetSyncVarDirtyBit() (formally SetDirtyBits)</summary>
         // automatically invoked when an update is sent for this object, but can
         // be called manually as well.
-        public void ClearAllDirtyBits()
+        public void ClearAllDirtyBits(bool clearSyncTime = true)
         {
             /// UNITYSTATION CODE /// \/ Saves a tiny bit of performance
             //lastSyncTime = NetworkTime.localTime;
+            if (clearSyncTime) lastSyncTime = NetworkTime.localTime;
             syncVarDirtyBits = 0L;
             syncObjectDirtyBits = 0L;
 
@@ -1118,7 +1132,7 @@ namespace Mirror
             {
                 return null;
             }
-            
+
             // ensure componentIndex is in range.
             // show explicit errors if something went wrong, instead of IndexOutOfRangeException.
             // removing components at runtime isn't allowed, yet this happened in a project so we need to check for it.
@@ -1399,28 +1413,28 @@ namespace Mirror
         }
 
         /// <summary>Like Start(), but only called on server and host.</summary>
-        public virtual void OnStartServer() {}
+        public virtual void OnStartServer() { }
 
         /// <summary>Stop event, only called on server and host.</summary>
-        public virtual void OnStopServer() {}
+        public virtual void OnStopServer() { }
 
         /// <summary>Like Start(), but only called on client and host.</summary>
-        public virtual void OnStartClient() {}
+        public virtual void OnStartClient() { }
 
         /// <summary>Stop event, only called on client and host.</summary>
-        public virtual void OnStopClient() {}
+        public virtual void OnStopClient() { }
 
         /// <summary>Like Start(), but only called on client and host for the local player object.</summary>
-        public virtual void OnStartLocalPlayer() {}
+        public virtual void OnStartLocalPlayer() { }
 
         /// <summary>Stop event, but only called on client and host for the local player object.</summary>
-        public virtual void OnStopLocalPlayer() {}
+        public virtual void OnStopLocalPlayer() { }
 
         /// <summary>Like Start(), but only called for objects the client has authority over.</summary>
-        public virtual void OnStartAuthority() {}
+        public virtual void OnStartAuthority() { }
 
         /// <summary>Stop event, only called for objects the client has authority over.</summary>
-        public virtual void OnStopAuthority() {}
+        public virtual void OnStopAuthority() { }
 
         // Weaver injects this into inheriting classes to return true.
         // allows runtime & tests to check if a type was weaved.
