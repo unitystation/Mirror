@@ -20,7 +20,6 @@ namespace Edgegap
             titleContent = new GUIContent("Edgegap Lobby Service Setup");
         }
 
-#if !UNITY_SERVER
         private void OnGUI()
         {
             if (waitingCreate)
@@ -102,8 +101,6 @@ namespace Edgegap
             }
             EditorGUILayout.HelpBox(new GUIContent("Done with your lobby?\nEnter the same name as creation to shut it down"));
         }
-#endif
-    
         private void RefreshStatus()
         {
             // Stop if window is closed
