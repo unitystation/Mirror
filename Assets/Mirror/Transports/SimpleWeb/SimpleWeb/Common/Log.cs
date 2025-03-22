@@ -47,14 +47,12 @@ namespace Mirror.SimpleWeb
         /// <param name="e">Exception to log</param>
         public static void Exception(Exception e)
         {
-            string timeStamp = $"[{DateTime.Now:HH:mm:ss}]";
-
 #if UNITY_SERVER || UNITY_WEBGL
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"{timeStamp} [SWT:Exception] {e.GetType().Name}: {e.Message}\n{e.StackTrace}\n\n");
+            Console.WriteLine($"[SWT:Exception] {e.GetType().Name}: {e.Message}\n{e.StackTrace}\n\n");
             Console.ResetColor();
 #else
-            logger.Log(LogType.Exception, $"{timeStamp} [SWT:Exception] {e.GetType().Name}: {e.Message}\n{e.StackTrace}\n\n");
+            logger.Log(LogType.Exception, $"[SWT:Exception] {e.GetType().Name}: {e.Message}\n{e.StackTrace}\n\n");
 #endif
         }
 
@@ -67,14 +65,12 @@ namespace Mirror.SimpleWeb
         {
             if (minLogLevel > Levels.Flood) return;
 
-            string timedMessage = $"[{DateTime.Now:HH:mm:ss}] {msg.Trim()}";
-
 #if UNITY_SERVER || UNITY_WEBGL
             Console.ForegroundColor = ConsoleColor.Gray;
-            logger.Log(LogType.Log, timedMessage);
+            logger.Log(LogType.Log, msg.Trim());
             Console.ResetColor();
 #else
-            logger.Log(LogType.Log, timedMessage);
+            logger.Log(LogType.Log, msg.Trim());
 #endif
         }
 
@@ -91,14 +87,12 @@ namespace Mirror.SimpleWeb
         {
             if (minLogLevel > Levels.Flood) return;
 
-            string timeStamp = $"[{DateTime.Now:HH:mm:ss}]";
-
 #if UNITY_SERVER || UNITY_WEBGL
             Console.ForegroundColor = ConsoleColor.DarkBlue;
-            logger.Log(LogType.Log, $"{timeStamp} {label}: {BufferToString(buffer, offset, length)}");
+            logger.Log(LogType.Log, $"{label}: {BufferToString(buffer, offset, length)}");
             Console.ResetColor();
 #else
-            logger.Log(LogType.Log, $"<color=cyan>{timeStamp} {label}: {BufferToString(buffer, offset, length)}</color>");
+            logger.Log(LogType.Log, $"<color=cyan>{label}: {BufferToString(buffer, offset, length)}</color>");
 #endif
         }
 
@@ -113,14 +107,12 @@ namespace Mirror.SimpleWeb
         {
             if (minLogLevel > Levels.Flood) return;
 
-            string timeStamp = $"[{DateTime.Now:HH:mm:ss}]";
-
 #if UNITY_SERVER || UNITY_WEBGL
             Console.ForegroundColor = ConsoleColor.DarkBlue;
-            logger.Log(LogType.Log, $"{timeStamp} {label}: {BufferToString(arrayBuffer.array, 0, arrayBuffer.count)}");
+            logger.Log(LogType.Log, $"{label}: {BufferToString(arrayBuffer.array, 0, arrayBuffer.count)}");
             Console.ResetColor();
 #else
-            logger.Log(LogType.Log, $"<color=cyan>{timeStamp} {label}: {BufferToString(arrayBuffer.array, 0, arrayBuffer.count)}</color>");
+            logger.Log(LogType.Log, $"<color=cyan>{label}: {BufferToString(arrayBuffer.array, 0, arrayBuffer.count)}</color>");
 #endif
         }
 
@@ -132,15 +124,13 @@ namespace Mirror.SimpleWeb
         {
             if (minLogLevel > Levels.Verbose) return;
 
-            string timedMessage = $"[{DateTime.Now:HH:mm:ss}] {msg.Trim()}";
-
 #if DEBUG
             // Debug builds and Unity Editor
-            logger.Log(LogType.Log, timedMessage);
+            logger.Log(LogType.Log, msg.Trim());
 #else
             // Server or WebGL
             Console.ForegroundColor = ConsoleColor.Blue;
-            Console.WriteLine(timedMessage);
+            Console.WriteLine(msg.Trim());
             Console.ResetColor();
 #endif
         }
@@ -164,17 +154,13 @@ namespace Mirror.SimpleWeb
         /// <param name="consoleColor">Default Cyan works in server and browser consoles</param>
         static void Info(string msg, ConsoleColor consoleColor = ConsoleColor.Cyan)
         {
-            if (minLogLevel > Levels.Info) return;
-
-            string timedMessage = $"[{DateTime.Now:HH:mm:ss}] {msg.Trim()}";
-
 #if DEBUG
             // Debug builds and Unity Editor
-            logger.Log(LogType.Log, timedMessage);
+            logger.Log(LogType.Log, msg.Trim());
 #else
             // Server or WebGL
             Console.ForegroundColor = consoleColor;
-            Console.WriteLine(timedMessage);
+            Console.WriteLine(msg.Trim());
             Console.ResetColor();
 #endif
         }
@@ -199,15 +185,13 @@ namespace Mirror.SimpleWeb
         {
             if (minLogLevel > Levels.Info) return;
 
-            string timedMessage = $"[{DateTime.Now:HH:mm:ss}] {e.Message}";
-
 #if DEBUG
             // Debug builds and Unity Editor
-            logger.Log(LogType.Exception, timedMessage);
+            logger.Log(LogType.Exception, e.Message);
 #else
             // Server or WebGL
             Console.ForegroundColor = ConsoleColor.DarkRed;
-            Console.WriteLine(timedMessage);
+            Console.WriteLine(e.Message);
             Console.ResetColor();
 #endif
         }
@@ -220,15 +204,13 @@ namespace Mirror.SimpleWeb
         {
             if (minLogLevel > Levels.Warn) return;
 
-            string timedMessage = $"[{DateTime.Now:HH:mm:ss}] {msg.Trim()}";
-
 #if DEBUG
             // Debug builds and Unity Editor
-            logger.Log(LogType.Warning, timedMessage);
+            logger.Log(LogType.Warning, msg.Trim());
 #else
             // Server or WebGL
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine(timedMessage);
+            Console.WriteLine(msg.Trim());
             Console.ResetColor();
 #endif
         }
@@ -247,15 +229,13 @@ namespace Mirror.SimpleWeb
         {
             if (minLogLevel > Levels.Error) return;
 
-            string timedMessage = $"[{DateTime.Now:HH:mm:ss}] {msg.Trim()}";
-
 #if DEBUG
             // Debug builds and Unity Editor
-            logger.Log(LogType.Error, timedMessage);
+            logger.Log(LogType.Error, msg.Trim());
 #else
             // Server or WebGL
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine(timedMessage);
+            Console.WriteLine(msg.Trim());
             Console.ResetColor();
 #endif
         }

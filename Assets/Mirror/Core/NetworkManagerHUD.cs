@@ -19,7 +19,6 @@ namespace Mirror
             manager = GetComponent<NetworkManager>();
         }
 
-#if !UNITY_SERVER
         void OnGUI()
         {
             // If this width is changed, also change offsetX in GUIConsole::OnGUI
@@ -159,6 +158,5 @@ namespace Mirror
                     manager.StopServer();
             }
         }
-#endif
     }
 }

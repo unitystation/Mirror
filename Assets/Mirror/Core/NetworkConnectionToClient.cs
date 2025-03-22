@@ -16,11 +16,6 @@ namespace Mirror
 
         public virtual string address { get; private set; }
 
-        /// <summary>Unique identifier for this connection that is assigned by the transport layer.</summary>
-        // assigned by transport, this id is unique for every connection on server.
-        // clients don't know their own id and they don't know other client's ids.
-        public readonly int connectionId;
-
         /// <summary>NetworkIdentities that this connection can see</summary>
         // TODO move to server's NetworkConnectionToClient?
         public readonly HashSet<NetworkIdentity> observing = new HashSet<NetworkIdentity>();
@@ -59,11 +54,9 @@ namespace Mirror
         /// <summary>Round trip time (in seconds) that it takes a message to go server->client->server.</summary>
         public double rtt => _rtt.Value;
 
-        internal NetworkConnectionToClient() : base() { }
-
-        public NetworkConnectionToClient(int networkConnectionId, string clientAddress = "localhost") : base()
+        public NetworkConnectionToClient(int networkConnectionId, string clientAddress = "localhost")
+            : base(networkConnectionId)
         {
-            connectionId = networkConnectionId;
             address = clientAddress;
 
             // initialize EMA with 'emaDuration' seconds worth of history.
@@ -118,8 +111,6 @@ namespace Mirror
             }
 
         }
-
-        public override string ToString() => $"connection({connectionId})";
 
         public void OnTimeSnapshot(TimeSnapshot snapshot)
         {

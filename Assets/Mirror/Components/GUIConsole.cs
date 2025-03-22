@@ -105,7 +105,6 @@ namespace Mirror
                 visible = !visible;
         }
 
-#if !UNITY_SERVER
         void OnGUI()
         {
             if (!visible) return;
@@ -130,6 +129,5 @@ namespace Mirror
 
             GUILayout.EndArea();
         }
-#endif
     }
 }

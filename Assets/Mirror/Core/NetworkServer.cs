@@ -68,17 +68,6 @@ namespace Mirror
         public static float sendInterval => sendRate < int.MaxValue ? 1f / sendRate : 0; // for 30 Hz, that's 33ms
         static double lastSendTime;
 
-        // ocassionally send a full reliable state for unreliable components to delta compress against.
-        // this only applies to Components with SyncMethod=Unreliable.
-        public static int unreliableBaselineRate = 1;
-        public static float unreliableBaselineInterval => unreliableBaselineRate < int.MaxValue ? 1f / unreliableBaselineRate : 0; // for 1 Hz, that's 1000ms
-        static double lastUnreliableBaselineTime;
-
-        // quake sends unreliable messages twice to make up for message drops.
-        // this double bandwidth, but allows for smaller buffer time / faster sync.
-        // best to turn this off unless the game is extremely fast paced.
-        public static bool unreliableRedundancy = false;
-
         /// <summary>Connection to host mode client (if any)</summary>
         public static LocalConnectionToClient localConnection { get; private set; }
 
@@ -348,8 +337,6 @@ namespace Mirror
             RegisterHandler<NetworkPingMessage>(NetworkTime.OnServerPing, false);
             RegisterHandler<NetworkPongMessage>(NetworkTime.OnServerPong, false);
             RegisterHandler<EntityStateMessage>(OnEntityStateMessage, true);
-            RegisterHandler<EntityStateMessageUnreliableBaseline>(OnEntityStateMessageUnreliableBaseline, true);
-            RegisterHandler<EntityStateMessageUnreliableDelta>(OnEntityStateMessageUnreliableDelta, true);
             RegisterHandler<TimeSnapshotMessage>(OnTimeSnapshotMessage, false); // unreliable may arrive before reliable authority went through
         }
 
@@ -444,10 +431,7 @@ namespace Mirror
                     {
                         // DeserializeServer checks permissions internally.
                         // failure to deserialize disconnects to prevent exploits.
-                        // -> initialState=false because for Reliable messages,
-                        //    initial always comes from server and broadcast
-                        //    updates are always deltas.
-                        if (!identity.DeserializeServer(reader, false))
+                        if (!identity.DeserializeServer(reader))
                         {
                             if (exceptionsDisconnect)
                             {
@@ -467,137 +451,6 @@ namespace Mirror
                     Debug.LogWarning($"EntityStateMessage from {connection} for {identity.name} without authority.");
             }
             // no warning. don't spam server logs.
-            // else Debug.LogWarning($"Did not find target for sync message for {message.netId} . Note: this can be completely normal because UDP messages may arrive out of order, so this message might have arrived after a Destroy message.");
-        }
-
-        // for client's owned ClientToServer components.
-        static void OnEntityStateMessageUnreliableBaseline(NetworkConnectionToClient connection, EntityStateMessageUnreliableBaseline message, int channelId)
-        {
-            // safety check: baseline should always arrive over Reliable channel.
-            if (channelId != Channels.Reliable)
-            {
-                Debug.LogError($"Server OnEntityStateMessageUnreliableBaseline arrived on channel {channelId} instead of Reliable. This should never happen!");
-                return;
-            }
-
-            // need to validate permissions carefully.
-            // an attacker may attempt to modify a not-owned or not-ClientToServer component.
-
-            // valid netId?
-            if (spawned.TryGetValue(message.netId, out NetworkIdentity identity) && identity != null)
-            {
-                // owned by the connection?
-                if (identity.connectionToClient == connection)
-                {
-                    // set the last received reliable baseline tick number.
-                    identity.lastUnreliableBaselineReceived = message.baselineTick;
-
-                    using (NetworkReaderPooled reader = NetworkReaderPool.Get(message.payload))
-                    {
-                        // DeserializeServer checks permissions internally.
-                        // failure to deserialize disconnects to prevent exploits.
-                        //
-                        // full state updates (initial=true) arrive over reliable.
-                        if (!identity.DeserializeServer(reader, true))
-                        {
-                            if (exceptionsDisconnect)
-                            {
-                                Debug.LogError($"Server failed to deserialize client unreliable state for {identity.name} with netId={identity.netId}, Disconnecting.");
-                                connection.Disconnect();
-                            }
-                            else
-                                Debug.LogWarning($"Server failed to deserialize client unreliable state for {identity.name} with netId={identity.netId}.");
-                        }
-                    }
-                }
-                // An attacker may attempt to modify another connection's entity
-                // This could also be a race condition of message in flight when
-                // RemoveClientAuthority is called, so not malicious.
-                // Don't disconnect, just log the warning.
-                else
-                    Debug.LogWarning($"EntityStateMessage from {connection} for {identity.name} without authority.");
-            }
-            // no warning. unreliable messages often arrive before/after the reliable spawn/despawn messages.
-            // else Debug.LogWarning($"Did not find target for sync message for {message.netId} . Note: this can be completely normal because UDP messages may arrive out of order, so this message might have arrived after a Destroy message.");
-        }
-
-        // for client's owned ClientToServer components.
-        static void OnEntityStateMessageUnreliableDelta(NetworkConnectionToClient connection, EntityStateMessageUnreliableDelta message, int channelId)
-        {
-            // safety check: baseline should always arrive over Reliable channel.
-            if (channelId != Channels.Unreliable)
-            {
-                Debug.LogError($"Server OnEntityStateMessageUnreliableDelta arrived on channel {channelId} instead of Unreliable. This should never happen!");
-                return;
-            }
-
-            // need to validate permissions carefully.
-            // an attacker may attempt to modify a not-owned or not-ClientToServer component.
-
-            // valid netId?
-            if (spawned.TryGetValue(message.netId, out NetworkIdentity identity) && identity != null)
-            {
-                // owned by the connection?
-                if (identity.connectionToClient == connection)
-                {
-                    // unreliable state sync messages may arrive out of order.
-                    // only ever apply state that's newer than the last received state.
-                    // note that we send one EntityStateMessage per Entity,
-                    // so there will be multiple with the same == timestamp.
-                    if (connection.remoteTimeStamp < identity.lastUnreliableStateTime)
-                    {
-                        // debug log to show that it's working.
-                        // can be tested via LatencySimulation scramble easily.
-                        Debug.Log($"Server caught out of order Unreliable state message for {identity.name}. This is fine.\nIdentity timestamp={identity.lastUnreliableStateTime:F3} batch remoteTimestamp={connection.remoteTimeStamp:F3}");
-                        return;
-                    }
-                    // UDP messages may accidentally arrive twice.
-                    // or even intentionally, if unreliableRedundancy is turned on.
-                    else if (connection.remoteTimeStamp == identity.lastUnreliableStateTime)
-                    {
-                        // only log this if unreliableRedundancy is disabled.
-                        // otherwise it's expected and will happen a lot.
-                        if (!unreliableRedundancy) Debug.Log($"Server caught duplicate Unreliable state message for {identity.name}. This is fine.\nIdentity timestamp={identity.lastUnreliableStateTime:F3} batch remoteTimestamp={connection.remoteTimeStamp:F3}");
-                        return;
-                    }
-
-                    // make sure this delta is for the correct baseline.
-                    // we don't want to apply an old delta on top of a new baseline.
-                    if (message.baselineTick != identity.lastUnreliableBaselineReceived)
-                    {
-                        Debug.Log($"Server caught Unreliable state message for old baseline for {identity} with baselineTick={identity.lastUnreliableBaselineReceived} messageBaseline={message.baselineTick}. This is fine.");
-                        return;
-                    }
-
-                    // set the new last received time for unreliable
-                    identity.lastUnreliableStateTime = connection.remoteTimeStamp;
-
-                    using (NetworkReaderPooled reader = NetworkReaderPool.Get(message.payload))
-                    {
-                        // DeserializeServer checks permissions internally.
-                        // failure to deserialize disconnects to prevent exploits.
-                        //
-                        // delta state updates (initial=false) arrive over unreliable.
-                        if (!identity.DeserializeServer(reader, false))
-                        {
-                            if (exceptionsDisconnect)
-                            {
-                                Debug.LogError($"Server failed to deserialize client unreliable state for {identity.name} with netId={identity.netId}, Disconnecting.");
-                                connection.Disconnect();
-                            }
-                            else
-                                Debug.LogWarning($"Server failed to deserialize client unreliable state for {identity.name} with netId={identity.netId}.");
-                        }
-                    }
-                }
-                // An attacker may attempt to modify another connection's entity
-                // This could also be a race condition of message in flight when
-                // RemoveClientAuthority is called, so not malicious.
-                // Don't disconnect, just log the warning.
-                else
-                    Debug.LogWarning($"EntityStateMessage from {connection} for {identity.name} without authority.");
-            }
-            // no warning. unreliable messages often arrive before/after the reliable spawn/despawn messages.
             // else Debug.LogWarning($"Did not find target for sync message for {message.netId} . Note: this can be completely normal because UDP messages may arrive out of order, so this message might have arrived after a Destroy message.");
         }
 
@@ -1370,7 +1223,7 @@ namespace Mirror
 
             switch (replacePlayerOptions)
             {
-                case ReplacePlayerOptions.KeepAuthority:
+				case ReplacePlayerOptions.KeepAuthority:
                     // This needs to be sent to clear isLocalPlayer on
                     // client while keeping hasAuthority true
                     SendChangeOwnerMessage(previousPlayer, conn);
@@ -1536,13 +1389,13 @@ namespace Mirror
         }
 
         // show / hide for connection //////////////////////////////////////////
-        internal static void ShowForConnection(NetworkIdentity identity, NetworkConnectionToClient conn)
+        internal static void ShowForConnection(NetworkIdentity identity, NetworkConnection conn)
         {
             if (conn.isReady)
                 SendSpawnMessage(identity, conn);
         }
 
-        internal static void HideForConnection(NetworkIdentity identity, NetworkConnectionToClient conn)
+        internal static void HideForConnection(NetworkIdentity identity, NetworkConnection conn)
         {
             ObjectHideMessage msg = new ObjectHideMessage
             {
@@ -1552,7 +1405,7 @@ namespace Mirror
         }
 
         // spawning ////////////////////////////////////////////////////////////
-        internal static void SendSpawnMessage(NetworkIdentity identity, NetworkConnectionToClient conn)
+        internal static void SendSpawnMessage(NetworkIdentity identity, NetworkConnection conn)
         {
             if (identity.serverOnly) return;
 
@@ -1590,7 +1443,7 @@ namespace Mirror
 
             // serialize all components with initialState = true
             // (can be null if has none)
-            identity.SerializeServer_Spawn(ownerWriter, observersWriter);
+            identity.SerializeServer(true, ownerWriter, observersWriter);
 
             // convert to ArraySegment to avoid reader allocations
             // if nothing was written, .ToArraySegment returns an empty segment.
@@ -1723,14 +1576,14 @@ namespace Mirror
         /// <summary>Spawn the given game object on all clients which are ready.</summary>
         // This will cause a new object to be instantiated from the registered
         // prefab, or from a custom spawn function.
-        public static void Spawn(GameObject obj, NetworkConnectionToClient ownerConnection = null)
+        public static void Spawn(GameObject obj, NetworkConnection ownerConnection = null)
         {
             SpawnObject(obj, ownerConnection);
         }
 
         /// <summary>Spawns an object and also assigns Client Authority to the specified client.</summary>
         // This is the same as calling NetworkIdentity.AssignClientAuthority on the spawned object.
-        public static void Spawn(GameObject obj, uint assetId, NetworkConnectionToClient ownerConnection = null)
+        public static void Spawn(GameObject obj, uint assetId, NetworkConnection ownerConnection = null)
         {
             if (GetNetworkIdentity(obj, out NetworkIdentity identity))
             {
@@ -1739,7 +1592,7 @@ namespace Mirror
             SpawnObject(obj, ownerConnection);
         }
 
-        static void SpawnObject(GameObject obj, NetworkConnectionToClient ownerConnection)
+        static void SpawnObject(GameObject obj, NetworkConnection ownerConnection)
         {
             // verify if we can spawn this
             if (Utils.IsPrefab(obj))
@@ -2063,18 +1916,11 @@ namespace Mirror
 
         // broadcasting ////////////////////////////////////////////////////////
         // helper function to get the right serialization for a connection
-        // -> unreliableBaselineElapsed: even though we only care about RELIABLE
-        //    components here, GetServerSerializationAtTick still caches all
-        //    the serializations for this frame. and when caching we already
-        //    need to know if the unreliable baseline will be needed or not.
-        static NetworkWriter SerializeForConnection_ReliableComponents(
-            NetworkIdentity identity,
-            NetworkConnectionToClient connection,
-            bool unreliableBaselineElapsed)
+        static NetworkWriter SerializeForConnection(NetworkIdentity identity, NetworkConnectionToClient connection)
         {
             // get serialization for this entity (cached)
             // IMPORTANT: int tick avoids floating point inaccuracy over days/weeks
-            NetworkIdentitySerialization serialization = identity.GetServerSerializationAtTick(Time.frameCount, unreliableBaselineElapsed);
+            NetworkIdentitySerialization serialization = identity.GetServerSerializationAtTick(FrameCountCash);
 
             // is this entity owned by this connection?
             bool owned = identity.connectionToClient == connection;
@@ -2084,68 +1930,26 @@ namespace Mirror
             if (owned)
             {
                 // was it dirty / did we actually serialize anything?
-                if (serialization.ownerWriterReliable.Position > 0)
-                    return serialization.ownerWriterReliable;
+                if (serialization.ownerWriter.Position > 0)
+                    return serialization.ownerWriter;
             }
             // observers writer if not owned
             else
             {
                 // was it dirty / did we actually serialize anything?
-                if (serialization.observersWriterReliable.Position > 0)
-                    return serialization.observersWriterReliable;
+                if (serialization.observersWriter.Position > 0)
+                    return serialization.observersWriter;
             }
 
             // nothing was serialized
             return null;
         }
 
-        // helper function to get the right serialization for a connection
-        static (NetworkWriter, NetworkWriter) SerializeForConnection_UnreliableComponents(
-            NetworkIdentity identity,
-            NetworkConnectionToClient connection,
-            bool unreliableBaselineElapsed)
-        {
-            // get serialization for this entity (cached)
-            // IMPORTANT: int tick avoids floating point inaccuracy over days/weeks
-            NetworkIdentitySerialization serialization = identity.GetServerSerializationAtTick(Time.frameCount, unreliableBaselineElapsed);
-
-            // is this entity owned by this connection?
-            bool owned = identity.connectionToClient == connection;
-
-            NetworkWriter baselineWriter = null;
-            NetworkWriter deltaWriter = null;
-
-            // send serialized data
-            // owner writer if owned
-            if (owned)
-            {
-                // was it dirty / did we actually serialize anything?
-                if (serialization.ownerWriterUnreliableBaseline.Position > 0)
-                    baselineWriter = serialization.ownerWriterUnreliableBaseline;
-
-                if (serialization.ownerWriterUnreliableDelta.Position > 0)
-                    deltaWriter = serialization.ownerWriterUnreliableDelta;
-            }
-            // observers writer if not owned
-            else
-            {
-                // was it dirty / did we actually serialize anything?
-                if (serialization.observersWriterUnreliableBaseline.Position > 0)
-                    baselineWriter = serialization.observersWriterUnreliableBaseline;
-
-                if (serialization.observersWriterUnreliableDelta.Position > 0)
-                    deltaWriter = serialization.observersWriterUnreliableDelta;
-            }
-
-            // nothing was serialized
-            return (baselineWriter, deltaWriter);
-        }
-
         // helper function to broadcast the world to a connection
-        static void BroadcastToConnection(NetworkConnectionToClient connection, bool unreliableBaselineElapsed)
+        static void BroadcastToConnection(NetworkConnectionToClient connection)
         {
-            /// UNITYSTATION CODE ///
-            //custom  looping method
+			/// UNITYSTATION CODE ///
+			//custom  looping method
             var cashedEmpty = connection.EmptyIndex;
             connection.EmptyIndex = 0;
             for (int i = 0; i < cashedEmpty; i++)
@@ -2155,100 +1959,26 @@ namespace Mirror
                 // if (identity != null)
                 var identity = connection.DirtyObserving[i];
 
-                // make sure it's not null or destroyed.
-                // (which can happen if someone uses
-                //  GameObject.Destroy instead of
-                //  NetworkServer.Destroy)
-                try
-                {
-                    // 'Reliable' sync: send Reliable components over reliable with initial/delta
-                    // get serialization for this entity viewed by this connection
-                    // (if anything was serialized this time)
-                    NetworkWriter serialization = SerializeForConnection_ReliableComponents(identity, connection,
-                        // IMPORTANT: even for Reliable components we must pass unreliableBaselineElapsed!
-                        //
-                        // consider this (in one frame):
-                        //   Serialize Reliable (unreliableBaseline=false)
-                        //     GetServerSerializationAtTick (unreliableBaseline=false)
-                        //       serializes new, clears dirty bits
-                        //   Serialize Unreliable (unreliableBaseline=true)
-                        //     GetServerSerializationAtTick (unreliableBaseline=true)
-                        //       last.baseline != baseline
-                        //         serializes new, which does nothing since dirty bits were already cleared above!
-                        //
-                        // TODO make this less magic in the future. too easy to miss.
-                        unreliableBaselineElapsed);
+				try {
+					// get serialization for this entity viewed by this connection
+					// (if anything was serialized this time)
+					NetworkWriter serialization = SerializeForConnection(identity, connection);
+					if (serialization != null)
+					{
+						EntityStateMessage message = new EntityStateMessage
+						{
+							netId = identity.netId,
+							payload = serialization.ToArraySegment()
+						};
+						connection.Send(message);
+					}
+				}
+				catch ( Exception  ex){
+					Debug.LogError( " dirty observing had null " );
+				}
 
-                    if (serialization != null)
-                    {
-                        EntityStateMessage message = new EntityStateMessage
-                        {
-                            netId = identity.netId,
-                            payload = serialization.ToArraySegment()
-                        };
-                        connection.Send(message);
-                    }
-
-                    // 'Unreliable' sync: send Unreliable components over unreliable
-                    // state is 'initial' for reliable baseline, and 'not initial' for unreliable deltas.
-                    //   note that syncInterval is always ignored for unreliable in order to have tick aligned [SyncVars].
-                    //   even if we pass SyncMethod.Reliable, it serializes with initialState=true.
-                    (NetworkWriter baselineSerialization, NetworkWriter deltaSerialization) = SerializeForConnection_UnreliableComponents(identity, connection, unreliableBaselineElapsed);
-
-                    // send unreliable delta first. ideally we want this to arrive before the new baseline.
-                    // reliable baseline also clears dirty bits, so unreliable must be sent first.
-                    if (deltaSerialization != null)
-                    {
-                        EntityStateMessageUnreliableDelta message = new EntityStateMessageUnreliableDelta
-                        {
-                            baselineTick = identity.lastUnreliableBaselineSent,
-                            netId = identity.netId,
-                            payload = deltaSerialization.ToArraySegment()
-                        };
-                        connection.Send(message, Channels.Unreliable);
-
-                        // quake sends unreliable messages twice to make up for message drops.
-                        // this double bandwidth, but allows for smaller buffer time / faster sync.
-                        // best to turn this off unless the game is extremely fast paced.
-                        if (unreliableRedundancy) connection.Send(message, Channels.Unreliable);
-                    }
-
-                    // if it's for a baseline sync, then send a reliable baseline message too.
-                    // this will likely arrive slightly after the unreliable delta above.
-                    if (unreliableBaselineElapsed)
-                    {
-                        if (baselineSerialization != null)
-                        {
-                            // remember last sent baseline tick for this entity.
-                            // (byte) to minimize bandwidth. we don't need the full tick,
-                            // just something small to compare against.
-                            identity.lastUnreliableBaselineSent = (byte)Time.frameCount;
-
-                            EntityStateMessageUnreliableBaseline message = new EntityStateMessageUnreliableBaseline
-                            {
-                                baselineTick = identity.lastUnreliableBaselineSent,
-                                netId = identity.netId,
-                                payload = baselineSerialization.ToArraySegment()
-                            };
-                            connection.Send(message, Channels.Reliable);
-                        }
-                    }
-                    // spawned list should have no null entries because we
-                    // always call Remove in OnObjectDestroy everywhere.
-                    // if it does have null then someone used
-                    // GameObject.Destroy instead of NetworkServer.Destroy.
-                    else
-                    {
-                        hasNull = true;
-                        Debug.LogWarning($"Found 'null' entry in observing list for connectionId={connection.connectionId}. Please call NetworkServer.Destroy to destroy networked objects. Don't use GameObject.Destroy.");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogError(" dirty observing had null ");
-                }
+                connection.DirtyObserving[i] = null;
             }
-            connection.DirtyObserving[i] = null;
         }
 
         // helper function to check a connection for inactivity and disconnect if necessary
@@ -2276,8 +2006,7 @@ namespace Mirror
         public static int FrameCountCash;
         public static bool ApplicationIsPlayingCash;
 
-        // unreliableFullSendIntervalElapsed: indicates that unreliable sync components need a reliable baseline sync this time.
-        static void Broadcast(bool unreliableBaselineElapsed)
+        static void Broadcast()
         {
             // copy all connections into a helper collection so that
             // OnTransportDisconnected can be called while iterating.
@@ -2302,7 +2031,7 @@ namespace Mirror
             //CUSTOM UNITYSTATION CODE//  So we can log any errors that go on With Unity funnies with logs on Thread
             try
             {
-                // check for inactivity. disconnects if necessary.
+				// check for inactivity. disconnects if necessary.
                 if (DisconnectIfInactive(connection))
                     return;
                 // has this connection joined the world yet?
@@ -2322,7 +2051,7 @@ namespace Mirror
                     connection.Send(new TimeSnapshotMessage(), Channels.Unreliable);
 
                     // broadcast world state to this connection
-                    BroadcastToConnection(connection, unreliableBaselineElapsed);
+                    BroadcastToConnection(connection);
                 }
 
                 // update connection to flush out batched messages
@@ -2386,9 +2115,8 @@ namespace Mirror
                 // snapshots _but_ not every single tick.
                 // Unity 2019 doesn't have Time.timeAsDouble yet
                 bool sendIntervalElapsed = AccurateInterval.Elapsed(NetworkTime.localTime, sendInterval, ref lastSendTime);
-                bool unreliableBaselineElapsed = AccurateInterval.Elapsed(NetworkTime.localTime, unreliableBaselineInterval, ref lastUnreliableBaselineTime);
                 if (!Application.isPlaying || sendIntervalElapsed)
-                    Broadcast(unreliableBaselineElapsed);
+                    Broadcast();
             }
 
             // process all outgoing messages after updating the world
