@@ -123,7 +123,6 @@ namespace Mirror
 
         #endregion
 
-#if !UNITY_SERVER
         #region Optional UI
 
         /// <summary>
@@ -193,6 +192,5 @@ namespace Mirror
         }
 
         #endregion
-#endif
     }
 }

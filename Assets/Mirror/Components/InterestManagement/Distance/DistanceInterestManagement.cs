@@ -75,8 +75,9 @@ namespace Mirror
             }
         }
 
+        // internal so we can update from tests
         [ServerCallback]
-        void LateUpdate()
+        internal void Update()
         {
             // rebuild all spawned NetworkIdentity's observers every interval
             if (NetworkTime.localTime >= lastRebuildTime + rebuildInterval)
