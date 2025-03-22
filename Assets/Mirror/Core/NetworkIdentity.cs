@@ -1503,33 +1503,30 @@ namespace Mirror
             // (otherwise [SyncVar] changes would never be serialized in tests)
             //
             // NOTE: != instead of < because int.max+1 overflows at some point.
-            lock (lastSerialization.observersWriter)
-            {
-                if (lastSerialization.tick != tick
+            if (lastSerialization.tick != tick
 #if UNITY_EDITOR
-                    || NetworkServer.ApplicationIsPlayingCash == false
+                || NetworkServer.ApplicationIsPlayingCash == false
 #endif
-                   )
-                {
-                    // reset
-                    lastSerialization.ResetWriters();
+               )
+            {
+                // reset
+                lastSerialization.ResetWriters();
 
-                    // serialize both Reliable and Unreliable components in one iteration.
-                    // doing each in their own iteration would be too costly.
-                    SerializeServer_Broadcast(
-                        lastSerialization.ownerWriterReliable,
-                        lastSerialization.observersWriterReliable,
-                        lastSerialization.ownerWriterUnreliableBaseline,
-                        lastSerialization.observersWriterUnreliableBaseline,
-                        lastSerialization.ownerWriterUnreliableDelta,
-                        lastSerialization.observersWriterUnreliableDelta,
-                        unreliableBaselineElapsed
-                    );
+                // serialize both Reliable and Unreliable components in one iteration.
+                // doing each in their own iteration would be too costly.
+                SerializeServer_Broadcast(
+                    lastSerialization.ownerWriterReliable,
+                    lastSerialization.observersWriterReliable,
+                    lastSerialization.ownerWriterUnreliableBaseline,
+                    lastSerialization.observersWriterUnreliableBaseline,
+                    lastSerialization.ownerWriterUnreliableDelta,
+                    lastSerialization.observersWriterUnreliableDelta,
+                    unreliableBaselineElapsed
+                );
 
-                    // set tick
-                    lastSerialization.tick = tick;
-                    //Debug.Log($"{name} (netId={netId}) serialized for tick={tickTimeStamp}");
-                }
+                // set tick
+                lastSerialization.tick = tick;
+                //Debug.Log($"{name} (netId={netId}) serialized for tick={tickTimeStamp}");
             }
 
             // return it

@@ -2239,16 +2239,14 @@ namespace Mirror
                     // GameObject.Destroy instead of NetworkServer.Destroy.
                     else
                     {
-                        hasNull = true;
                         Debug.LogWarning($"Found 'null' entry in observing list for connectionId={connection.connectionId}. Please call NetworkServer.Destroy to destroy networked objects. Don't use GameObject.Destroy.");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError(" dirty observing had null ");
+                    Debug.LogError($" dirty observing had null: {ex}");
                 }
             }
-            connection.DirtyObserving[i] = null;
         }
 
         // helper function to check a connection for inactivity and disconnect if necessary
@@ -2322,7 +2320,7 @@ namespace Mirror
                     connection.Send(new TimeSnapshotMessage(), Channels.Unreliable);
 
                     // broadcast world state to this connection
-                    BroadcastToConnection(connection, unreliableBaselineElapsed);
+                    BroadcastToConnection(connection, true);
                 }
 
                 // update connection to flush out batched messages
