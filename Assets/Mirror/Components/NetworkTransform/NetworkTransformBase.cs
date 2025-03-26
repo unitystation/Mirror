@@ -119,7 +119,7 @@ namespace Mirror
         protected double timeStampAdjustment => NetworkServer.sendInterval * (sendIntervalMultiplier - 1);
         protected double offset => timelineOffset ? NetworkServer.sendInterval * sendIntervalMultiplier : 0;
 
-        // velocity for covenience (animators etc.)
+        // velocity for convenience (animators etc.)
         // this isn't technically NetworkTransforms job, but it's needed by so many projects that we just provide it anyway.
         public Vector3 velocity { get; private set; }
         public Vector3 angularVelocity { get; private set; }
@@ -272,8 +272,8 @@ namespace Mirror
             // these can be used to drive animations or other behaviours
             if (!isOwned && Time.deltaTime > 0)
             {
-                velocity = (transform.position - interpolated.position) / Time.deltaTime;
-                angularVelocity = (transform.rotation.eulerAngles - interpolated.rotation.eulerAngles) / Time.deltaTime;
+                velocity = (transform.localPosition - interpolated.position) / Time.deltaTime;
+                angularVelocity = (transform.localRotation.eulerAngles - interpolated.rotation.eulerAngles) / Time.deltaTime;
             }
 
             // interpolate parts
@@ -427,6 +427,10 @@ namespace Mirror
             // so let's clear the buffers.
             serverSnapshots.Clear();
             clientSnapshots.Clear();
+
+            // Prevent resistance from CharacterController
+            // or non-knematic Rigidbodies when teleporting.
+            Physics.SyncTransforms();
         }
 
         public virtual void Reset()
@@ -434,6 +438,9 @@ namespace Mirror
             ResetState();
             // default to ClientToServer so this works immediately for users
             syncDirection = SyncDirection.ClientToServer;
+
+            // default to 20Hz, 20 sends per second if data has changed.
+            syncInterval = 0.05f;
         }
 
         protected virtual void OnEnable()
@@ -469,8 +476,8 @@ namespace Mirror
             }
         }
 
+#if !UNITY_SERVER && (UNITY_EDITOR || DEVELOPMENT_BUILD)
         // OnGUI allocates even if it does nothing. avoid in release.
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
         // debug ///////////////////////////////////////////////////////////////
         protected virtual void OnGUI()
         {
