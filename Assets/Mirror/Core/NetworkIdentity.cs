@@ -1330,6 +1330,14 @@ namespace Mirror
             // The client will match to the existing object
             NetworkServer.SendChangeOwnerMessage(this, conn);
 
+            /// UNITYSTATION CODE ///
+            /// Because Host doesn't get updated until the next frame its isOwned so,
+            /// We are adding this to make it do it
+            if (conn is LocalConnectionToClient)
+            {
+                isOwned = true;
+            }
+
             clientAuthorityCallback?.Invoke(conn, this, true);
 
             return true;
