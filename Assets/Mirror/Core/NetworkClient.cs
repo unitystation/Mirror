@@ -1673,8 +1673,9 @@ namespace Mirror
             // nothing to do in host mode. server already knows the state.
             if (NetworkServer.active) return;
 
+            /// UNITYSTATION CODE /// Because It's Swamps the server with loads of unneeded messages we don't use this stuff
             // send time snapshot every sendInterval.
-            Send(new TimeSnapshotMessage(), Channels.Unreliable);
+            //Send(new TimeSnapshotMessage(), Channels.Unreliable);
 
             // broadcast client state to server
             BroadcastToServer();
