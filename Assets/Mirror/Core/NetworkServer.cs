@@ -1974,7 +1974,7 @@ namespace Mirror
 					}
 				}
 				catch ( Exception  ex){
-					Debug.LogError( " dirty observing had null " );
+					Debug.LogError( " dirty observing had null " + ex.ToString() );
 				}
 
                 connection.DirtyObserving[i] = null;
