@@ -758,7 +758,7 @@ namespace Mirror
                 if (handlers.TryGetValue(msgType, out NetworkMessageDelegate handler))
                 {
                     handler.Invoke(connection, reader, channelId);
-                    connection.lastMessageTime = Time.time;
+                    connection.lastMessageTime = CurrentTimeCash;
                     return true;
                 }
                 else
@@ -2002,10 +2002,10 @@ namespace Mirror
         internal static readonly List<NetworkConnectionToClient> connectionsCopy =
             new List<NetworkConnectionToClient>();
 
-        //CUSTOM UNITYSTATION CODE// thread Safe read Time.frameCount
+        //CUSTOM UNITYSTATION CODE// thread Safe read Time.frameCount and Time.time
         public static int FrameCountCash;
         public static bool ApplicationIsPlayingCash;
-
+        public static float CurrentTimeCash;
         static void Broadcast()
         {
             // copy all connections into a helper collection so that
@@ -2022,6 +2022,7 @@ namespace Mirror
             //CUSTOM UNITYSTATION CODE// Cashs Time.frameCount and Parallel loop instead of for loop
             FrameCountCash = Time.frameCount;
             ApplicationIsPlayingCash = Application.isPlaying;
+            CurrentTimeCash = Time.time;
             Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
         }
 
