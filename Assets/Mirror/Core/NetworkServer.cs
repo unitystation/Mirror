@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Mirror.RemoteCalls;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 
 namespace Mirror
 {
@@ -2006,6 +2008,9 @@ namespace Mirror
         public static int FrameCountCash;
         public static bool ApplicationIsPlayingCash;
         public static float CurrentTimeCash;
+
+        public static Stopwatch SW = new Stopwatch();
+
         static void Broadcast()
         {
             // copy all connections into a helper collection so that
@@ -2023,7 +2028,11 @@ namespace Mirror
             FrameCountCash = Time.frameCount;
             ApplicationIsPlayingCash = Application.isPlaying;
             CurrentTimeCash = Time.time;
+            SW.Reset();
+            SW.Start();
             Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
+            SW.Stop();
+            Debug.LogError(SW.ElapsedMilliseconds);
         }
 
         //CUSTOM UNITYSTATION CODE// Added part of Broadcast Logic
