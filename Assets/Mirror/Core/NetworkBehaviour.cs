@@ -1118,7 +1118,7 @@ namespace Mirror
             {
                 return null;
             }
-            
+
             // ensure componentIndex is in range.
             // show explicit errors if something went wrong, instead of IndexOutOfRangeException.
             // removing components at runtime isn't allowed, yet this happened in a project so we need to check for it.
@@ -1307,7 +1307,7 @@ namespace Mirror
             {
                 // show a detailed error and let the user know what went wrong
                 Debug.LogError(
-                    $"OnSerialize failed for: object component={this.GetType()} sceneId={this:X}\n\n{e}"); /// UNITYSTATION CODE /// Removed name because it would cause thread errors }
+                    $"OnSerialize failed for: object component={this.GetType()} sceneId={this.netId:X}\n\n{e}"); /// UNITYSTATION CODE /// Removed name because it would cause thread errors }
             }
 
             int endPosition = writer.Position;
