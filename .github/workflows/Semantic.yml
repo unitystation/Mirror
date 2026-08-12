@@ -27,18 +27,22 @@ jobs:
         with:
           node-version: '*'
 
-      - name: Install conventional-changelog-conventionalcommits
-        run: npm i -D conventional-changelog-conventionalcommits
+      # - name: Install conventional-changelog-conventionalcommits
+      #   run: npm i -D conventional-changelog-conventionalcommits
 
       # - name: Install semantic-release fork
       #   run: npm install --save-dev github:MrGadget1024/semantic-release
 
-      - name: Install Plugins
-        run: npm i -D @semantic-release/exec
+      # - name: Install Plugins
+      #   run: npm i -D @semantic-release/exec
 
       - name: Release
-        run: npx semantic-release
-          --debug
+        run: >
+          npx
+          --package semantic-release@24
+          --package @semantic-release/exec@7
+          --package conventional-changelog-conventionalcommits@9
+          semantic-release --debug
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           UNITYPACK_OUTPUT: "Mirror.unitypackage"
