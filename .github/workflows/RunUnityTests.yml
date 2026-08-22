@@ -67,7 +67,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: matrix.unityVersion > '6000.4'
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v7
         with:
           files: ./CodeCoverage/**/*.xml
           flags: unittests,unity-${{ matrix.unityVersion }}
