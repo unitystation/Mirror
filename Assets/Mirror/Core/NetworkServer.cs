@@ -410,8 +410,8 @@ namespace Mirror
 
             // Debug.Log($"OnCommandMessage for netId:{msg.netId} conn:{conn}");
 
-            using (NetworkReaderPooled networkReader = NetworkReaderPool.Get(msg.payload))
-                identity.HandleRemoteCall(msg.componentIndex, msg.functionHash, RemoteCallType.Command, networkReader, conn);
+            using NetworkReaderPooled networkReader = NetworkReaderPool.Get(msg.payload);
+            identity.HandleRemoteCall(msg.componentIndex, msg.functionHash, RemoteCallType.Command, networkReader, conn);
         }
 
         // client to server broadcast //////////////////////////////////////////
@@ -427,23 +427,21 @@ namespace Mirror
                 // owned by the connection?
                 if (identity.connectionToClient == connection)
                 {
-                    using (NetworkReaderPooled reader = NetworkReaderPool.Get(message.payload))
+                    using NetworkReaderPooled reader = NetworkReaderPool.Get(message.payload);
+                    // DeserializeServer checks permissions internally.
+                    // failure to deserialize disconnects to prevent exploits.
+                    // -> initialState=false because for Reliable messages,
+                    //    initial always comes from server and broadcast
+                    //    updates are always deltas.
+                    if (!identity.DeserializeServer(reader, false))
                     {
-                        // DeserializeServer checks permissions internally.
-                        // failure to deserialize disconnects to prevent exploits.
-                        // -> initialState=false because for Reliable messages,
-                        //    initial always comes from server and broadcast
-                        //    updates are always deltas.
-                        if (!identity.DeserializeServer(reader, false))
+                        if (exceptionsDisconnect)
                         {
-                            if (exceptionsDisconnect)
-                            {
-                                Debug.LogError($"Server failed to deserialize client state for {identity.name} with netId={identity.netId}, Disconnecting.");
-                                connection.Disconnect();
-                            }
-                            else
-                                Debug.LogWarning($"Server failed to deserialize client state for {identity.name} with netId={identity.netId}.");
+                            Debug.LogError($"Server failed to deserialize client state for {identity.name} with netId={identity.netId}, Disconnecting.");
+                            connection.Disconnect();
                         }
+                        else
+                            Debug.LogWarning($"Server failed to deserialize client state for {identity.name} with netId={identity.netId}.");
                     }
                 }
                 // An attacker may attempt to modify another connection's entity
@@ -479,22 +477,20 @@ namespace Mirror
                     // set the last received reliable baseline tick number.
                     identity.lastUnreliableBaselineReceived = message.baselineTick;
 
-                    using (NetworkReaderPooled reader = NetworkReaderPool.Get(message.payload))
+                    using NetworkReaderPooled reader = NetworkReaderPool.Get(message.payload);
+                    // DeserializeServer checks permissions internally.
+                    // failure to deserialize disconnects to prevent exploits.
+                    //
+                    // full state updates (initial=true) arrive over reliable.
+                    if (!identity.DeserializeServer(reader, true))
                     {
-                        // DeserializeServer checks permissions internally.
-                        // failure to deserialize disconnects to prevent exploits.
-                        //
-                        // full state updates (initial=true) arrive over reliable.
-                        if (!identity.DeserializeServer(reader, true))
+                        if (exceptionsDisconnect)
                         {
-                            if (exceptionsDisconnect)
-                            {
-                                Debug.LogError($"Server failed to deserialize client unreliable state for {identity.name} with netId={identity.netId}, Disconnecting.");
-                                connection.Disconnect();
-                            }
-                            else
-                                Debug.LogWarning($"Server failed to deserialize client unreliable state for {identity.name} with netId={identity.netId}.");
+                            Debug.LogError($"Server failed to deserialize client unreliable state for {identity.name} with netId={identity.netId}, Disconnecting.");
+                            connection.Disconnect();
                         }
+                        else
+                            Debug.LogWarning($"Server failed to deserialize client unreliable state for {identity.name} with netId={identity.netId}.");
                     }
                 }
                 // An attacker may attempt to modify another connection's entity
@@ -552,22 +548,20 @@ namespace Mirror
                     // set the new last received time for unreliable
                     identity.lastUnreliableStateTime = connection.remoteTimeStamp;
 
-                    using (NetworkReaderPooled reader = NetworkReaderPool.Get(message.payload))
+                    using NetworkReaderPooled reader = NetworkReaderPool.Get(message.payload);
+                    // DeserializeServer checks permissions internally.
+                    // failure to deserialize disconnects to prevent exploits.
+                    //
+                    // delta state updates (initial=false) arrive over unreliable.
+                    if (!identity.DeserializeServer(reader, false))
                     {
-                        // DeserializeServer checks permissions internally.
-                        // failure to deserialize disconnects to prevent exploits.
-                        //
-                        // delta state updates (initial=false) arrive over unreliable.
-                        if (!identity.DeserializeServer(reader, false))
+                        if (exceptionsDisconnect)
                         {
-                            if (exceptionsDisconnect)
-                            {
-                                Debug.LogError($"Server failed to deserialize client unreliable state for {identity.name} with netId={identity.netId}, Disconnecting.");
-                                connection.Disconnect();
-                            }
-                            else
-                                Debug.LogWarning($"Server failed to deserialize client unreliable state for {identity.name} with netId={identity.netId}.");
+                            Debug.LogError($"Server failed to deserialize client unreliable state for {identity.name} with netId={identity.netId}, Disconnecting.");
+                            connection.Disconnect();
                         }
+                        else
+                            Debug.LogWarning($"Server failed to deserialize client unreliable state for {identity.name} with netId={identity.netId}.");
                     }
                 }
                 // An attacker may attempt to modify another connection's entity
@@ -635,11 +629,8 @@ namespace Mirror
         // removes local connection to client
         internal static void RemoveLocalConnection()
         {
-            if (localConnection != null)
-            {
-                localConnection.Disconnect();
-                localConnection = null;
-            }
+            localConnection?.Disconnect();
+            localConnection = null;
             RemoveConnection(0);
         }
 
@@ -671,39 +662,37 @@ namespace Mirror
             }
 
             // Debug.Log($"Server.SendToAll {typeof(T)}");
-            using (NetworkWriterPooled writer = NetworkWriterPool.Get())
+            using NetworkWriterPooled writer = NetworkWriterPool.Get();
+            // pack message only once
+            NetworkMessages.Pack(message, writer);
+            ArraySegment<byte> segment = writer.ToArraySegment();
+
+            // validate packet size immediately.
+            // we know how much can fit into one batch at max.
+            // if it's larger, log an error immediately with the type <T>.
+            // previously we only logged in Update() when processing batches,
+            // but there we don't have type information anymore.
+            int max = NetworkMessages.MaxMessageSize(channelId);
+            if (writer.Position > max)
             {
-                // pack message only once
-                NetworkMessages.Pack(message, writer);
-                ArraySegment<byte> segment = writer.ToArraySegment();
-
-                // validate packet size immediately.
-                // we know how much can fit into one batch at max.
-                // if it's larger, log an error immediately with the type <T>.
-                // previously we only logged in Update() when processing batches,
-                // but there we don't have type information anymore.
-                int max = NetworkMessages.MaxMessageSize(channelId);
-                if (writer.Position > max)
-                {
-                    Debug.LogError($"NetworkServer.SendToAll: message of type {typeof(T)} with a size of {writer.Position} bytes is larger than the max allowed message size in one batch: {max}.\nThe message was dropped, please make it smaller.");
-                    return;
-                }
-
-                // filter and then send to all internet connections at once
-                // -> makes code more complicated, but is HIGHLY worth it to
-                //    avoid allocations, allow for multicast, etc.
-                int count = 0;
-                foreach (NetworkConnectionToClient conn in connections.Values)
-                {
-                    if (sendToReadyOnly && !conn.isReady)
-                        continue;
-
-                    count++;
-                    conn.Send(segment, channelId);
-                }
-
-                NetworkDiagnostics.OnSend(message, channelId, segment.Count, count);
+                Debug.LogError($"NetworkServer.SendToAll: message of type {typeof(T)} with a size of {writer.Position} bytes is larger than the max allowed message size in one batch: {max}.\nThe message was dropped, please make it smaller.");
+                return;
             }
+
+            // filter and then send to all internet connections at once
+            // -> makes code more complicated, but is HIGHLY worth it to
+            //    avoid allocations, allow for multicast, etc.
+            int count = 0;
+            foreach (NetworkConnectionToClient conn in connections.Values)
+            {
+                if (sendToReadyOnly && !conn.isReady)
+                    continue;
+
+                count++;
+                conn.Send(segment, channelId);
+            }
+
+            NetworkDiagnostics.OnSend(message, channelId, segment.Count, count);
         }
 
         /// <summary>Send a message to all clients which have joined the world (are ready).</summary>
@@ -729,31 +718,29 @@ namespace Mirror
             if (identity == null || identity.observers.Count == 0)
                 return;
 
-            using (NetworkWriterPooled writer = NetworkWriterPool.Get())
+            using NetworkWriterPooled writer = NetworkWriterPool.Get();
+            // pack message into byte[] once
+            NetworkMessages.Pack(message, writer);
+            ArraySegment<byte> segment = writer.ToArraySegment();
+
+            // validate packet size immediately.
+            // we know how much can fit into one batch at max.
+            // if it's larger, log an error immediately with the type <T>.
+            // previously we only logged in Update() when processing batches,
+            // but there we don't have type information anymore.
+            int max = NetworkMessages.MaxMessageSize(channelId);
+            if (writer.Position > max)
             {
-                // pack message into byte[] once
-                NetworkMessages.Pack(message, writer);
-                ArraySegment<byte> segment = writer.ToArraySegment();
-
-                // validate packet size immediately.
-                // we know how much can fit into one batch at max.
-                // if it's larger, log an error immediately with the type <T>.
-                // previously we only logged in Update() when processing batches,
-                // but there we don't have type information anymore.
-                int max = NetworkMessages.MaxMessageSize(channelId);
-                if (writer.Position > max)
-                {
-                    Debug.LogError($"NetworkServer.SendToObservers: message of type {typeof(T)} with a size of {writer.Position} bytes is larger than the max allowed message size in one batch: {max}.\nThe message was dropped, please make it smaller.");
-                    return;
-                }
-
-                foreach (NetworkConnectionToClient conn in identity.observers.Values)
-                {
-                    conn.Send(segment, channelId);
-                }
-
-                NetworkDiagnostics.OnSend(message, channelId, segment.Count, identity.observers.Count);
+                Debug.LogError($"NetworkServer.SendToObservers: message of type {typeof(T)} with a size of {writer.Position} bytes is larger than the max allowed message size in one batch: {max}.\nThe message was dropped, please make it smaller.");
+                return;
             }
+
+            foreach (NetworkConnectionToClient conn in identity.observers.Values)
+            {
+                conn.Send(segment, channelId);
+            }
+
+            NetworkDiagnostics.OnSend(message, channelId, segment.Count, identity.observers.Count);
         }
 
         /// <summary>Send a message to only clients which are ready with option to include the owner of the object identity</summary>
@@ -765,37 +752,35 @@ namespace Mirror
             if (identity == null || identity.observers.Count == 0)
                 return;
 
-            using (NetworkWriterPooled writer = NetworkWriterPool.Get())
+            using NetworkWriterPooled writer = NetworkWriterPool.Get();
+            // pack message only once
+            NetworkMessages.Pack(message, writer);
+            ArraySegment<byte> segment = writer.ToArraySegment();
+
+            // validate packet size immediately.
+            // we know how much can fit into one batch at max.
+            // if it's larger, log an error immediately with the type <T>.
+            // previously we only logged in Update() when processing batches,
+            // but there we don't have type information anymore.
+            int max = NetworkMessages.MaxMessageSize(channelId);
+            if (writer.Position > max)
             {
-                // pack message only once
-                NetworkMessages.Pack(message, writer);
-                ArraySegment<byte> segment = writer.ToArraySegment();
-
-                // validate packet size immediately.
-                // we know how much can fit into one batch at max.
-                // if it's larger, log an error immediately with the type <T>.
-                // previously we only logged in Update() when processing batches,
-                // but there we don't have type information anymore.
-                int max = NetworkMessages.MaxMessageSize(channelId);
-                if (writer.Position > max)
-                {
-                    Debug.LogError($"NetworkServer.SendToReadyObservers: message of type {typeof(T)} with a size of {writer.Position} bytes is larger than the max allowed message size in one batch: {max}.\nThe message was dropped, please make it smaller.");
-                    return;
-                }
-
-                int count = 0;
-                foreach (NetworkConnectionToClient conn in identity.observers.Values)
-                {
-                    bool isOwner = conn == identity.connectionToClient;
-                    if ((!isOwner || includeOwner) && conn.isReady)
-                    {
-                        count++;
-                        conn.Send(segment, channelId);
-                    }
-                }
-
-                NetworkDiagnostics.OnSend(message, channelId, segment.Count, count);
+                Debug.LogError($"NetworkServer.SendToReadyObservers: message of type {typeof(T)} with a size of {writer.Position} bytes is larger than the max allowed message size in one batch: {max}.\nThe message was dropped, please make it smaller.");
+                return;
             }
+
+            int count = 0;
+            foreach (NetworkConnectionToClient conn in identity.observers.Values)
+            {
+                bool isOwner = conn == identity.connectionToClient;
+                if ((!isOwner || includeOwner) && conn.isReady)
+                {
+                    count++;
+                    conn.Send(segment, channelId);
+                }
+            }
+
+            NetworkDiagnostics.OnSend(message, channelId, segment.Count, count);
         }
 
         /// <summary>Send a message to only clients which are ready including the owner of the NetworkIdentity</summary>
@@ -949,49 +934,47 @@ namespace Mirror
                     while (!isLoadingScene &&
                            connection.unbatcher.GetNextMessage(out ArraySegment<byte> message, out double remoteTimestamp))
                     {
-                        using (NetworkReaderPooled reader = NetworkReaderPool.Get(message))
+                        using NetworkReaderPooled reader = NetworkReaderPool.Get(message);
+                        // enough to read at least header size?
+                        if (reader.Remaining >= NetworkMessages.IdSize)
                         {
-                            // enough to read at least header size?
-                            if (reader.Remaining >= NetworkMessages.IdSize)
-                            {
-                                // make remoteTimeStamp available to the user
-                                connection.remoteTimeStamp = remoteTimestamp;
+                            // make remoteTimeStamp available to the user
+                            connection.remoteTimeStamp = remoteTimestamp;
 
-                                // handle message
-                                if (!UnpackAndInvoke(connection, reader, channelId))
-                                {
-                                    // warn, disconnect and return if failed
-                                    // -> warning because attackers might send random data
-                                    // -> messages in a batch aren't length prefixed.
-                                    //    failing to read one would cause undefined
-                                    //    behaviour for every message afterwards.
-                                    //    so we need to disconnect.
-                                    // -> return to avoid the below unbatches.count error.
-                                    //    we already disconnected and handled it.
-                                    if (exceptionsDisconnect)
-                                    {
-                                        Debug.LogError($"NetworkServer: failed to unpack and invoke message. Disconnecting {connectionId}.");
-                                        connection.Disconnect();
-                                    }
-                                    else
-                                        Debug.LogWarning($"NetworkServer: failed to unpack and invoke message from connectionId:{connectionId}.");
-
-                                    return;
-                                }
-                            }
-                            // otherwise disconnect
-                            else
+                            // handle message
+                            if (!UnpackAndInvoke(connection, reader, channelId))
                             {
+                                // warn, disconnect and return if failed
+                                // -> warning because attackers might send random data
+                                // -> messages in a batch aren't length prefixed.
+                                //    failing to read one would cause undefined
+                                //    behaviour for every message afterwards.
+                                //    so we need to disconnect.
+                                // -> return to avoid the below unbatches.count error.
+                                //    we already disconnected and handled it.
                                 if (exceptionsDisconnect)
                                 {
-                                    Debug.LogError($"NetworkServer: received message from connectionId:{connectionId} was too short (messages should start with message id). Disconnecting.");
+                                    Debug.LogError($"NetworkServer: failed to unpack and invoke message. Disconnecting {connectionId}.");
                                     connection.Disconnect();
                                 }
                                 else
-                                    Debug.LogWarning($"NetworkServer: received message from connectionId:{connectionId} was too short (messages should start with message id).");
+                                    Debug.LogWarning($"NetworkServer: failed to unpack and invoke message from connectionId:{connectionId}.");
 
                                 return;
                             }
+                        }
+                        // otherwise disconnect
+                        else
+                        {
+                            if (exceptionsDisconnect)
+                            {
+                                Debug.LogError($"NetworkServer: received message from connectionId:{connectionId} was too short (messages should start with message id). Disconnecting.");
+                                connection.Disconnect();
+                            }
+                            else
+                                Debug.LogWarning($"NetworkServer: received message from connectionId:{connectionId} was too short (messages should start with message id).");
+
+                            return;
                         }
                     }
                 }
@@ -1555,25 +1538,23 @@ namespace Mirror
             //Debug.Log($"Server SendSpawnMessage: name:{identity.name} sceneId:{identity.sceneId:X} netid:{identity.netId}");
 
             // one writer for owner, one for observers
-            using (NetworkWriterPooled ownerWriter = NetworkWriterPool.Get(), observersWriter = NetworkWriterPool.Get())
+            using NetworkWriterPooled ownerWriter = NetworkWriterPool.Get(), observersWriter = NetworkWriterPool.Get();
+            bool isOwner = identity.connectionToClient == conn;
+            ArraySegment<byte> payload = CreateSpawnMessagePayload(isOwner, identity, ownerWriter, observersWriter);
+            SpawnMessage message = new SpawnMessage
             {
-                bool isOwner = identity.connectionToClient == conn;
-                ArraySegment<byte> payload = CreateSpawnMessagePayload(isOwner, identity, ownerWriter, observersWriter);
-                SpawnMessage message = new SpawnMessage
-                {
-                    netId = identity.netId,
-                    isLocalPlayer = conn.identity == identity,
-                    isOwner = isOwner,
-                    sceneId = identity.sceneId,
-                    assetId = identity.assetId,
-                    // use local values for VR support
-                    position = identity.transform.localPosition,
-                    rotation = identity.transform.localRotation,
-                    scale = identity.transform.localScale,
-                    payload = payload
-                };
-                conn.Send(message);
-            }
+                netId = identity.netId,
+                isLocalPlayer = conn.identity == identity,
+                isOwner = isOwner,
+                sceneId = identity.sceneId,
+                assetId = identity.assetId,
+                // use local values for VR support
+                position = identity.transform.localPosition,
+                rotation = identity.transform.localRotation,
+                scale = identity.transform.localScale,
+                payload = payload
+            };
+            conn.Send(message);
         }
 
         static ArraySegment<byte> CreateSpawnMessagePayload(bool isOwner, NetworkIdentity identity, NetworkWriterPooled ownerWriter, NetworkWriterPooled observersWriter)
