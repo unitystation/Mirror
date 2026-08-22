@@ -1347,24 +1347,25 @@ namespace Mirror
 
             Respawn(identity);
 
-            switch (replacePlayerOptions)
-            {
-                case ReplacePlayerOptions.KeepAuthority:
-                    // This needs to be sent to clear isLocalPlayer on
-                    // client while keeping hasAuthority true
-                    SendChangeOwnerMessage(previousPlayer, conn);
-                    break;
-                case ReplacePlayerOptions.KeepActive:
-                    // This clears both isLocalPlayer and hasAuthority on client
-                    previousPlayer.RemoveClientAuthority();
-                    break;
-                case ReplacePlayerOptions.Unspawn:
-                    UnSpawn(previousPlayer.gameObject);
-                    break;
-                case ReplacePlayerOptions.Destroy:
-                    Destroy(previousPlayer.gameObject);
-                    break;
-            }
+            if (previousPlayer != null)
+                switch (replacePlayerOptions)
+                {
+                    case ReplacePlayerOptions.KeepAuthority:
+                        // This needs to be sent to clear isLocalPlayer on
+                        // client while keeping hasAuthority true
+                        SendChangeOwnerMessage(previousPlayer, conn);
+                        break;
+                    case ReplacePlayerOptions.KeepActive:
+                        // This clears both isLocalPlayer and hasAuthority on client
+                        previousPlayer.RemoveClientAuthority();
+                        break;
+                    case ReplacePlayerOptions.Unspawn:
+                        UnSpawn(previousPlayer.gameObject);
+                        break;
+                    case ReplacePlayerOptions.Destroy:
+                        Destroy(previousPlayer.gameObject);
+                        break;
+                }
 
             return true;
         }
