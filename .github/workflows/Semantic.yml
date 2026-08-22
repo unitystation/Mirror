@@ -42,7 +42,7 @@ jobs:
           --package semantic-release@24
           --package @semantic-release/exec@7
           --package conventional-changelog-conventionalcommits@9
-          semantic-release --debug
+          semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           UNITYPACK_OUTPUT: "Mirror.unitypackage"
