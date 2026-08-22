@@ -52,14 +52,14 @@ jobs:
           coverageOptions:  'generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;assemblyFilters:+Mirror,+Mirror.*'
         
       - name: Archive test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: Test Results ${{ matrix.unityVersion }}
           path: artifacts
 
       - name: Archive coverage results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if:  always()
         with:
           name: Coverage Results ${{ matrix.unityVersion }}
