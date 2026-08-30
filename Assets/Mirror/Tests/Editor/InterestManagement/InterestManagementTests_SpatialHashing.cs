@@ -19,8 +19,10 @@ namespace Mirror.Tests.InterestManagement
             // setup server aoi since InterestManagement Awake isn't called
             NetworkServer.aoi = aoi;
 
-            // rebuild grid once so the two connections are in there
-            aoi.Update();
+            // Force the grid to contain the two connections.
+            // Do not rely on the time-gated Update() path.
+            // NetworkTime.localTime is environment-dependent in Edit Mode tests.
+            aoi.RefreshGrid();
         }
 
         [TearDown]
