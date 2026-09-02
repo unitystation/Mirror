@@ -139,7 +139,7 @@ namespace Mirror
                 if (!room.showRoomGUI)
                     return;
 
-                if (!Utils.IsSceneActive(room.RoomScene))
+                if (!NetworkManager.IsSceneActive(room.RoomScene))
                     return;
 
                 DrawPlayerReadyState();
@@ -162,8 +162,7 @@ namespace Mirror
             {
                 // This button only shows on the Host for all players other than the Host
                 // Host and Players can't remove themselves (stop the client instead)
-                // Host can kick a Player this way.#
-                Debug.LogError("Host kick Weird inbuilt Mirror thing");
+                // Host can kick a Player this way.
                 GetComponent<NetworkIdentity>().connectionToClient.Disconnect();
             }
 
