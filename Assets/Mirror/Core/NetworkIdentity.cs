@@ -287,7 +287,8 @@ namespace Mirror
         internal byte lastUnreliableBaselineReceived;
 
         // Keep track of all sceneIds to detect scene duplicates
-        static readonly Dictionary<ulong, NetworkIdentity> sceneIds =
+        /// UNITYSTATION CODE /// Public so it can be cleaned up
+        public static readonly Dictionary<ulong, NetworkIdentity> sceneIds =
             new Dictionary<ulong, NetworkIdentity>();
 
         // Helper function to handle Command/Rpc
