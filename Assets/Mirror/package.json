@@ -1,0 +1,11 @@
+{
+    "name": "org.unitystation.spacemirror",
+    "version": "1.3.0",
+    "displayName": "SpaceMirror",
+    "description": "Unitystation's fork of Mirror.",
+    "unity": "6000.5",
+    "author": {
+        "name": "Unitystation",
+        "url": "https://github.com/unitystation/Mirror"
+    }
+}
