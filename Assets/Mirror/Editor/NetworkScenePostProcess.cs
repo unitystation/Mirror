@@ -82,8 +82,11 @@ namespace Mirror
 
                             // nothing good will happen when trying to launch with invalid sceneIds.
                             // show an error and stop playing immediately.
-                            Debug.LogError($"Scene {path} needs to be opened and resaved, because the scene object {identity.name} has no valid sceneId yet.");
-                            EditorApplication.isPlaying = false;
+                            /// UNITYSTATION CODE ///
+                            /// Replaced LogError with LogWarning as too many errors will cancel the build
+                            Debug.LogWarning($"Scene {path} needs to be opened and resaved, because the scene object {identity.name} has no valid sceneId yet.");
+                            /// UNITYSTATION CODE ///
+                            //EditorApplication.isPlaying = false;
                         }
                     }
                 }

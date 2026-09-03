@@ -1,3 +1,9 @@
+/**
+ * /// UNITYSTATION CODE ///
+ * This is commented out as the networked prefab list is dynamically generated at build time.
+ */
+
+/*
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -201,3 +207,4 @@ namespace Mirror
         }
     }
 }
+*/

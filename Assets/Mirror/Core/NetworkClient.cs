@@ -560,6 +560,27 @@ namespace Mirror
             RegisterHandler<RpcMessage>(OnRPCMessage);
         }
 
+
+        /// UNITYSTATION CODE ///
+        // Adds back this obsolete method because updating the usage of it looks like a pain.
+        /// <summary>Register a handler for a message type T. Most should require authentication.</summary>
+        // Deprecated 2021-03-13
+        [Obsolete("Use RegisterHandler<T> version without NetworkConnection parameter. It always points to NetworkClient.connection anyway.")]
+        public static void RegisterHandlerObsolete<T>(Action<NetworkConnection, T> handler, bool requireAuthentication = true, bool exceptionsDisconnect = true)
+            where T : struct, NetworkMessage
+        {
+            ushort msgType = NetworkMessageId<T>.Id;
+            if (handlers.ContainsKey(msgType))
+            {
+                Debug.LogWarning($"NetworkClient.RegisterHandler replacing handler for {typeof(T).FullName}, id={msgType}. If replacement is intentional, use ReplaceHandler instead to avoid this warning.");
+            }
+
+            // register Id <> Type in lookup for debugging.
+            NetworkMessages.Lookup[msgType] = typeof(T);
+
+            handlers[msgType] = NetworkMessages.WrapHandler(handler, requireAuthentication, exceptionsDisconnect);
+        }
+
         /// <summary>Register a handler for a message type T. Most should require authentication.</summary>
         public static void RegisterHandler<T>(Action<T> handler, bool requireAuthentication = true)
             where T : struct, NetworkMessage
@@ -1177,6 +1198,17 @@ namespace Mirror
             //    fixes: https://github.com/MirrorNetworking/Mirror/issues/3259
             InitializeIdentityFlags(identity);
 
+            /// UNITYSTATION CODE ///
+            ///  Try catch + So we can applied map save stuff Before the network stuff so it ends up in the right state, Because if it was the other way then we would be overwriting networked stuff that has changed
+            try
+            {
+                NetworkManager.singleton.ObjectBeforePayloadDataClient(identity);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError(e.ToString());
+            }
+
             // deserialize components if any payload
             // (Count is 0 if there were no components)
             if (message.payload.Count > 0)
@@ -1246,6 +1278,9 @@ namespace Mirror
             if (spawnHandlers.TryGetValue(message.assetId, out SpawnHandlerDelegate handler))
             {
                 GameObject obj = handler(message);
+                /// UNITYSTATION CODE ///
+                // Update the localPosition for mapped objects as they may have been moved.
+                obj.transform.localPosition = message.position; //note??
                 if (obj == null)
                 {
                     Debug.LogError($"Spawn Handler returned null, Handler assetId '{message.assetId}'");
@@ -1608,14 +1643,14 @@ namespace Mirror
                     // add to spawned because later when we ApplySpawnPayload
                     // there may be SyncVars that cross-reference other objects
 
-                    // When deferring ApplySpawnPayload via pendingSpawns until OnObjectSpawnFinished, 
-                    // simply copying the SpawnMessage struct isn't sufficient. The payload is an 
-                    // ArraySegment<byte> referencing the original buffer received from the server, 
-                    // managed by the client's NetworkReaderPooled. This buffer may be recycled or 
-                    // reused after OnSpawn but before ApplySpawnPayload, leading to corruption 
-                    // (e.g., EndOfStreamException in NetworkReader.ReadBlittable when reading past 
-                    // available bytes, as seen with 20+ objects in Benchmark). Deep copying payload 
-                    // ensures the data remains intact and independent of the reader's pooled buffer 
+                    // When deferring ApplySpawnPayload via pendingSpawns until OnObjectSpawnFinished,
+                    // simply copying the SpawnMessage struct isn't sufficient. The payload is an
+                    // ArraySegment<byte> referencing the original buffer received from the server,
+                    // managed by the client's NetworkReaderPooled. This buffer may be recycled or
+                    // reused after OnSpawn but before ApplySpawnPayload, leading to corruption
+                    // (e.g., EndOfStreamException in NetworkReader.ReadBlittable when reading past
+                    // available bytes, as seen with 20+ objects in Benchmark). Deep copying payload
+                    // ensures the data remains intact and independent of the reader's pooled buffer
                     // lifecycle, preventing corruption during deferred application.
                     // Note that payload.Count is 0 if there are no components to deserialize, which
                     // means payload.Array is null, so we must skip the deep copy in such cases.
@@ -1805,8 +1840,9 @@ namespace Mirror
             // nothing to do in host mode. server already knows the state.
             if (NetworkServer.active) return;
 
+            /// UNITYSTATION CODE /// Because It's Swamps the server with loads of unneeded messages we don't use this stuff
             // send time snapshot every sendInterval.
-            Send(new TimeSnapshotMessage { scaledTime = NetworkTime.localScaledTime }, Channels.Unreliable);
+            //Send(new TimeSnapshotMessage { scaledTime = NetworkTime.localScaledTime }, Channels.Unreliable);
 
             // broadcast client state to server
             BroadcastToServer(unreliableBaselineElapsed);
@@ -1934,18 +1970,23 @@ namespace Mirror
                             // without unspawn handler, we need to disable/destroy.
                             else
                             {
+                                /// UNITYSTATION CODE ///
+                                // Why? Because for some reason Mirror wants to treat seen objects as special.
+                                // It's better to just destroy the object so we don't get inconsistent behaviour
+                                // between something that spawned in and something that was put in the scene.
+
                                 // scene objects are reset and disabled.
                                 // they always stay in the scene, we don't destroy them.
-                                if (identity.sceneId != 0)
-                                {
-                                    identity.ResetState();
-                                    identity.gameObject.SetActive(false);
-                                }
+                                //if (identity.sceneId != 0)
+                                //{
+                                //    identity.ResetState();
+                                //    identity.gameObject.SetActive(false);
+                                //}
                                 // spawned objects are destroyed
-                                else
-                                {
-                                    GameObject.Destroy(identity.gameObject);
-                                }
+                                //else
+                                //{
+                                GameObject.Destroy(identity.gameObject);
+                                //}
                             }
                         }
                     }

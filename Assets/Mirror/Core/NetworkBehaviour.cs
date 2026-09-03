@@ -168,7 +168,7 @@ namespace Mirror
         // Hooks are queued during deserialization and invoked in OnObjectSpawnFinished.
         internal readonly List<Action> deferredSyncVarHooks = new List<Action>();
 
-        // Queue for deferred SyncCollection Actions during initial spawn.  
+        // Queue for deferred SyncCollection Actions during initial spawn.
         // Only used on pure client (not host mode) when isSpawnFinished = false.
         // Actions are queued during deserialization and invoked in OnObjectSpawnFinished.
         internal readonly List<Action> deferredSyncCollectionActions = new List<Action>();
@@ -228,6 +228,13 @@ namespace Mirror
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetSyncVarDirtyBit(ulong dirtyBit)
         {
+            /// UNITYSTATION CODE ///
+            // Set our custom isDirty field true
+            if (netIdentity != null)
+            {
+                netIdentity.isDirty = true;
+            }
+
             syncVarDirtyBits |= dirtyBit;
         }
 
@@ -247,10 +254,13 @@ namespace Mirror
         // OR both bitmasks. != 0 if either was dirty.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool IsDirty() =>
+            /// UNITYSTATION CODE ///
+            // It's presumed to be dirty already since the addition of isDirty on the network component
+            true;
             // check bits first. this is basically free.
-            (syncVarDirtyBits | syncObjectDirtyBits) != 0UL &&
-            // only check time if bits were dirty. this is more expensive.
-            NetworkTime.localTime - lastSyncTime >= syncInterval;
+            //(syncVarDirtyBits | syncObjectDirtyBits) != 0UL &&
+            /// only check time if bits were dirty. this is more expensive.
+            //NetworkTime.localTime - lastSyncTime >= syncInterval;
 
         // true if any SyncVar or SyncObject is dirty
         // OR both bitmasks. != 0 if either was dirty.
@@ -262,7 +272,8 @@ namespace Mirror
         // be called manually as well.
         public void ClearAllDirtyBits(bool clearSyncTime = true)
         {
-            if (clearSyncTime) lastSyncTime = NetworkTime.localTime;
+            /// UNITYSTATION CODE /// \/ Saves a tiny bit of performance
+            //if (clearSyncTime) lastSyncTime = NetworkTime.localTime;
             syncVarDirtyBits = 0L;
             syncObjectDirtyBits = 0L;
 
@@ -287,7 +298,7 @@ namespace Mirror
 
             // Store back-reference to this NetworkBehaviour
             syncObject.networkBehaviour = this;
-            
+
             // add it, remember the index in list (if Count=0, index=0 etc.)
             int index = syncObjects.Count;
             syncObjects.Add(syncObject);
@@ -654,6 +665,16 @@ namespace Mirror
         public void GeneratedSyncVarSetter_NetworkBehaviour<T>(T value, ref T field, ulong dirtyBit, Action<T, T> OnChanged, ref NetworkBehaviourSyncVar netIdField)
             where T : NetworkBehaviour
         {
+            /// UNITYSTATION CODE ///
+            // so we can modify synchvars in the editor, When not playing
+#if UNITY_EDITOR
+            if (Application.isPlaying == false)
+            {
+                field = value;
+                return;
+            }
+#endif
+
             if (!SyncVarNetworkBehaviourEqual(value, netIdField))
             {
                 T oldValue = field;
@@ -1055,6 +1076,15 @@ namespace Mirror
             // get the new NetworkBehaviour now that netId field is set
             field = GetSyncVarNetworkBehaviour(netIdField, ref field);
 
+            /// UNITYSTATION CODE ///
+            // so we can modify synchvars in the editor, When not playing
+#if UNITY_EDITOR
+            if (Application.isPlaying == false)
+            {
+                return;
+            }
+#endif
+
             // any hook? then call if changed.
             // in host mode initial spawn, also call hook even if value hasn't changed,
             // because the field was already set on server but hook wasn't called yet.
@@ -1171,6 +1201,15 @@ namespace Mirror
         // -> ref GameObject as second argument makes OnDeserialize processing easier
         protected T GetSyncVarNetworkBehaviour<T>(NetworkBehaviourSyncVar syncNetBehaviour, ref T behaviourField) where T : NetworkBehaviour
         {
+            /// UNITYSTATION CODE ///
+            // so we can modify synchvars in the editor, When not playing
+#if UNITY_EDITOR
+            if (Application.isPlaying == false)
+            {
+                return behaviourField;
+            }
+#endif
+
             // server always uses the field
             // if neither, fallback to original field
             // fixes: https://github.com/MirrorNetworking/Mirror/issues/3447
@@ -1373,7 +1412,10 @@ namespace Mirror
             catch (Exception e)
             {
                 // show a detailed error and let the user know what went wrong
-                Debug.LogError($"OnSerialize failed for: object={name} component={GetType()} sceneId={netIdentity.sceneId:X}\n\n{e}");
+                Debug.LogError(
+                    $"OnSerialize failed for: object component={this.GetType()} sceneId={this.netId:X}\n\n{e}");
+                /// UNITYSTATION CODE /// /\ Removed name because it would cause thread errors }
+                //Debug.LogError($"OnSerialize failed for: object={name} component={GetType()} sceneId={netIdentity.sceneId:X}\n\n{e}");
             }
             int endPosition = writer.Position;
 

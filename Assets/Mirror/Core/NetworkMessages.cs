@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using UnityEngine;
@@ -154,6 +155,18 @@ namespace Mirror
                     // should we disconnect on exceptions?
                     if (exceptionsDisconnect)
                     {
+                        /// UNITYSTATION CODE /// //To prevent stupid disconnect from client having an error on their end
+                        Debug.LogError($" error processing message Reason: {exception}");
+                        if (NetworkServer.spawned.First().Value.isServer) //To prevent stupid disconnect from client having an error on their end
+                        {
+                            Debug.LogError($"Disconnecting connection: {conn} because reading a message of type {typeof(T)} caused an Exception. This can happen if the other side accidentally (or an attacker intentionally) sent invalid data. Reason: {exception}");
+#if UNITY_EDITOR
+                            Debug.LogError("This will cause a disconnect on the SERVER , Prevented for now");
+                            return;
+#endif
+                            conn.Disconnect();
+                        }
+
                         Debug.LogError($"Disconnecting connection: {conn} because reading a message of type {typeof(T)} caused an Exception. This can happen if the other side accidentally (or an attacker intentionally) sent invalid data. Reason: {exception}");
                         conn.Disconnect();
                         return;
@@ -180,16 +193,25 @@ namespace Mirror
                 }
                 catch (Exception exception)
                 {
-                    // should we disconnect on exceptions?
-                    if (exceptionsDisconnect)
+                    /// UNITYSTATION CODE /// //To prevent stupid disconnect from client having an error on their end
+                    Debug.LogError($" error processing message Reason: {exception}");
+                    if (NetworkServer.spawned.First().Value.isServer)
                     {
-                        Debug.LogError($"Disconnecting connection: {conn} because handling a message of type {typeof(T)} caused an Exception. This can happen if the other side accidentally (or an attacker intentionally) sent invalid data. Reason: {exception}");
-                        conn.Disconnect();
-                    }
-                    // otherwise log it but allow the connection to keep playing
-                    else
-                    {
-                        Debug.LogError($"Caught an Exception when handling a message from: {conn} of type {typeof(T)}. Reason: {exception}");
+                        // should we disconnect on exceptions?
+                        if (exceptionsDisconnect)
+                        {
+                            Debug.LogError($"Disconnecting connection: {conn} because handling a message of type {typeof(T)} caused an Exception. This can happen if the other side accidentally (or an attacker intentionally) sent invalid data. Reason: {exception}");
+#if UNITY_EDITOR
+                            Debug.LogError("This will cause a disconnect on the SERVER , Prevented for now");
+                            return;
+#endif
+                            conn.Disconnect();
+                        }
+                        // otherwise log it but allow the connection to keep playing
+                        else
+                        {
+                            Debug.LogError($"Caught an Exception when handling a message from: {conn} of type {typeof(T)}. Reason: {exception}");
+                        }
                     }
                 }
             };

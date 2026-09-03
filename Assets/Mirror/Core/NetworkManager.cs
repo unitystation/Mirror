@@ -9,7 +9,9 @@ namespace Mirror
 {
     public enum PlayerSpawnMethod { Random, RoundRobin }
     public enum NetworkManagerMode { Offline, ServerOnly, ClientOnly, Host }
-    public enum HeadlessStartOptions { DoNothing, AutoStartServer, AutoStartClient }
+    public enum HeadlessStartOptions { DoNothing, AutoStartServer, AutoStartClient, AutoStartHost}
+    /// UNITYSTATION CODE /// added AutoStartHost
+
 
     [DisallowMultipleComponent]
     [AddComponentMenu("Network/Network Manager")]
@@ -257,6 +259,9 @@ namespace Mirror
                         case HeadlessStartOptions.AutoStartClient:
                             StartClient();
                             break;
+                        case HeadlessStartOptions.AutoStartHost: /// UNITYSTATION CODE /// so It's like the old behaviour
+                            StartHost();
+                            break;
                     }
             }
         }
@@ -271,6 +276,13 @@ namespace Mirror
         public virtual void LateUpdate()
         {
             UpdateScene();
+        }
+
+        /// UNITYSTATION CODE ///
+        /// So we can applied map save stuff Before the network stuff so it ends up in the right state, Because if it was the other way then we would be overwriting networked stuff that has changed
+        public virtual void ObjectBeforePayloadDataClient(NetworkIdentity identity)
+        {
+
         }
 
         ////////////////////////////////////////////////////////////////////////

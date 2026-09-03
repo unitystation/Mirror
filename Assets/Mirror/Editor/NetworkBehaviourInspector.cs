@@ -1,3 +1,6 @@
+/// UNITYSTATION CODE ///
+// commented out to improve performance in the editor
+/*/
 using System;
 using System.Reflection;
 using UnityEditor;
@@ -114,3 +117,4 @@ namespace Mirror
         }
     }
 }
+/*/

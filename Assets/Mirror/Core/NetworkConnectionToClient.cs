@@ -25,6 +25,10 @@ namespace Mirror
         // TODO move to server's NetworkConnectionToClient?
         public readonly HashSet<NetworkIdentity> observing = new HashSet<NetworkIdentity>();
 
+        /// UNITYSTATION CODE /// Faster than looping through observing
+        public int EmptyIndex = 0;
+        public NetworkIdentity[] DirtyObserving = new NetworkIdentity[10000];
+
         // unbatcher
         public Unbatcher unbatcher = new Unbatcher();
 
@@ -74,6 +78,48 @@ namespace Mirror
 
             // buffer limit should be at least multiplier to have enough in there
             snapshotBufferSizeLimit = Mathf.Max((int)NetworkClient.snapshotSettings.bufferTimeMultiplier, snapshotBufferSizeLimit);
+        }
+
+        /// UNITYSTATION CODE /// logic for adding new dirty
+        public void AddDirty(NetworkIdentity Dirty)
+        {
+            if (EmptyIndex >= DirtyObserving.Length)
+            {
+                Debug.LogError($" Having to expand observer array expensive!!! how many do you have!!?!? {EmptyIndex} adding 1000");
+                Array.Resize(ref DirtyObserving, DirtyObserving.Length + 1000);
+            }
+            DirtyObserving[EmptyIndex] = Dirty;
+            EmptyIndex++;
+        }
+
+        /// UNITYSTATION CODE /// logic for adding removing
+        public void RemoveDirty(NetworkIdentity RemovingDirty)
+        {
+            if (RemovingDirty == null) return;
+            var IndexAt = 0;
+
+            for (int i = 0; i < EmptyIndex; i++)
+            {
+                if (DirtyObserving[i] == RemovingDirty)
+                {
+                    IndexAt = i;
+                    break;
+                }
+            }
+
+            if (DirtyObserving[IndexAt] != RemovingDirty) return;
+
+            if (EmptyIndex - 1 == IndexAt)
+            {
+                DirtyObserving[IndexAt] = null;
+                EmptyIndex--;
+            }
+            else
+            {
+                DirtyObserving[IndexAt] = DirtyObserving[EmptyIndex - 1];
+                DirtyObserving[EmptyIndex - 1] = null;
+                EmptyIndex--;
+            }
         }
 
         public override string ToString() => $"connection({connectionId})";
@@ -188,6 +234,9 @@ namespace Mirror
         {
             observing.Remove(netIdentity);
 
+            /// UNITYSTATION CODE /// dirty! is not now
+            RemoveDirty(netIdentity);
+
             if (!isDestroyed)
             {
                 // hide identity for this conn
@@ -200,6 +249,8 @@ namespace Mirror
             foreach (NetworkIdentity netIdentity in observing)
             {
                 netIdentity.RemoveObserver(this);
+                /// UNITYSTATION CODE /// dirty! is not now
+                RemoveDirty(netIdentity);
             }
             observing.Clear();
         }

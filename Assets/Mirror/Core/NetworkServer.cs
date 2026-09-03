@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Mirror.RemoteCalls;
 using UnityEngine;
 
@@ -31,6 +32,18 @@ namespace Mirror
     /// <summary>NetworkServer handles remote connections and has a local connection for a local client.</summary>
     public static partial class NetworkServer
     {
+        /// <summary>
+        /// UNITYSTATION CODE ///
+        /// The definitive list of scenes that a client connection is allowed to observe (server only).
+        /// </summary>
+        public static Dictionary<NetworkConnectionToClient, List<UnityEngine.SceneManagement.Scene>> observerSceneList
+            = new Dictionary<NetworkConnectionToClient, List<UnityEngine.SceneManagement.Scene>>();
+
+        /// <summary>
+        /// CUSTOM UNITYSTATION CODE Somewhere to put the logs from all the threads of errors
+        /// </summary>
+        public static string LogString = "";
+
         static bool initialized;
         public static int maxConnections;
 
@@ -188,6 +201,10 @@ namespace Mirror
         {
             if (initialized)
                 return;
+
+            /// UNITYSTATION CODE ///
+            // Allows Mirror to play nice with Domain Reloading disabled.
+            isLoadingScene = false;
 
             // safety: ensure Weaving succeded.
             // if it silently failed, we would get lots of 'writer not found'
@@ -2020,9 +2037,13 @@ namespace Mirror
         // both worlds without any worrying now!
         public static void RebuildObservers(NetworkIdentity identity, bool initialize)
         {
+            /// UNITYSTATION CODE ///
+            // Condition (OR) "identity.visible == Visibility.ForceShown" was removed so our custom scene check always works.
+            // Add it back if we switch over to spatial management.
             // if there is no interest management system,
             // or if 'force shown' then add all connections
-            if (aoi == null || identity.visibility == Visibility.ForceShown)
+            if (aoi == null)
+                //if (aoi == null || identity.visible == Visibility.ForceShown)
             {
                 RebuildObserversDefault(identity, initialize);
             }
@@ -2117,103 +2138,91 @@ namespace Mirror
         // helper function to broadcast the world to a connection
         static void BroadcastToConnection(NetworkConnectionToClient connection, bool unreliableBaselineElapsed)
         {
-            // for each entity that this connection is seeing
-            bool hasNull = false;
-            foreach (NetworkIdentity identity in connection.observing)
+            /// UNITYSTATION CODE ///
+            //custom  looping method
+            var cashedEmpty = connection.EmptyIndex;
+            connection.EmptyIndex = 0;
+            for (int i = 0; i < cashedEmpty; i++)
             {
-                // make sure it's not null or destroyed.
-                // (which can happen if someone uses
-                //  GameObject.Destroy instead of
-                //  NetworkServer.Destroy)
-                if (identity != null)
+                /// UNITYSTATION CODE ///
+                // Null checks are slow: changed condition.
+                // if (identity != null)
+                var identity = connection.DirtyObserving[i];
+
+                // 'Reliable' sync: send Reliable components over reliable with initial/delta
+                // get serialization for this entity viewed by this connection
+                // (if anything was serialized this time)
+                NetworkWriter serialization = SerializeForConnection_ReliableComponents(identity, connection,
+                    // IMPORTANT: even for Reliable components we must pass unreliableBaselineElapsed!
+                    //
+                    // consider this (in one frame):
+                    //   Serialize Reliable (unreliableBaseline=false)
+                    //     GetServerSerializationAtTick (unreliableBaseline=false)
+                    //       serializes new, clears dirty bits
+                    //   Serialize Unreliable (unreliableBaseline=true)
+                    //     GetServerSerializationAtTick (unreliableBaseline=true)
+                    //       last.baseline != baseline
+                    //         serializes new, which does nothing since dirty bits were already cleared above!
+                    //
+                    // TODO make this less magic in the future. too easy to miss.
+                    unreliableBaselineElapsed);
+
+                if (serialization != null)
                 {
-                    // 'Reliable' sync: send Reliable components over reliable with initial/delta
-                    // get serialization for this entity viewed by this connection
-                    // (if anything was serialized this time)
-                    NetworkWriter serialization = SerializeForConnection_ReliableComponents(identity, connection,
-                        // IMPORTANT: even for Reliable components we must pass unreliableBaselineElapsed!
-                        //
-                        // consider this (in one frame):
-                        //   Serialize Reliable (unreliableBaseline=false)
-                        //     GetServerSerializationAtTick (unreliableBaseline=false)
-                        //       serializes new, clears dirty bits
-                        //   Serialize Unreliable (unreliableBaseline=true)
-                        //     GetServerSerializationAtTick (unreliableBaseline=true)
-                        //       last.baseline != baseline
-                        //         serializes new, which does nothing since dirty bits were already cleared above!
-                        //
-                        // TODO make this less magic in the future. too easy to miss.
-                        unreliableBaselineElapsed);
-
-                    if (serialization != null)
+                    EntityStateMessage message = new EntityStateMessage
                     {
-                        EntityStateMessage message = new EntityStateMessage
-                        {
-                            netId = identity.netId,
-                            payload = serialization.ToArraySegment()
-                        };
-                        connection.Send(message);
-                    }
+                        netId = identity.netId, payload = serialization.ToArraySegment()
+                    };
+                    connection.Send(message);
+                }
 
-                    // 'Unreliable' sync: send Unreliable components over unreliable
-                    // state is 'initial' for reliable baseline, and 'not initial' for unreliable deltas.
-                    //   note that syncInterval is always ignored for unreliable in order to have tick aligned [SyncVars].
-                    //   even if we pass SyncMethod.Reliable, it serializes with initialState=true.
-                    (NetworkWriter baselineSerialization, NetworkWriter deltaSerialization) = SerializeForConnection_UnreliableComponents(identity, connection, unreliableBaselineElapsed);
+                // 'Unreliable' sync: send Unreliable components over unreliable
+                // state is 'initial' for reliable baseline, and 'not initial' for unreliable deltas.
+                //   note that syncInterval is always ignored for unreliable in order to have tick aligned [SyncVars].
+                //   even if we pass SyncMethod.Reliable, it serializes with initialState=true.
+                (NetworkWriter baselineSerialization, NetworkWriter deltaSerialization) =
+                    SerializeForConnection_UnreliableComponents(identity, connection, unreliableBaselineElapsed);
 
-                    // send unreliable delta first. ideally we want this to arrive before the new baseline.
-                    // reliable baseline also clears dirty bits, so unreliable must be sent first.
-                    if (deltaSerialization != null)
+                // send unreliable delta first. ideally we want this to arrive before the new baseline.
+                // reliable baseline also clears dirty bits, so unreliable must be sent first.
+                if (deltaSerialization != null)
+                {
+                    EntityStateMessageUnreliableDelta message = new EntityStateMessageUnreliableDelta
                     {
-                        EntityStateMessageUnreliableDelta message = new EntityStateMessageUnreliableDelta
+                        baselineTick = identity.lastUnreliableBaselineSent,
+                        netId = identity.netId,
+                        payload = deltaSerialization.ToArraySegment()
+                    };
+                    connection.Send(message, Channels.Unreliable);
+
+                    // quake sends unreliable messages twice to make up for message drops.
+                    // this double bandwidth, but allows for smaller buffer time / faster sync.
+                    // best to turn this off unless the game is extremely fast paced.
+                    if (unreliableRedundancy) connection.Send(message, Channels.Unreliable);
+                }
+
+                // if it's for a baseline sync, then send a reliable baseline message too.
+                // this will likely arrive slightly after the unreliable delta above.
+                if (unreliableBaselineElapsed)
+                {
+                    if (baselineSerialization != null)
+                    {
+                        // remember last sent baseline tick for this entity.
+                        // (byte) to minimize bandwidth. we don't need the full tick,
+                        // just something small to compare against.
+                        identity.lastUnreliableBaselineSent = (byte)FrameCountCash;
+
+                        EntityStateMessageUnreliableBaseline message = new EntityStateMessageUnreliableBaseline
                         {
                             baselineTick = identity.lastUnreliableBaselineSent,
                             netId = identity.netId,
-                            payload = deltaSerialization.ToArraySegment()
+                            payload = baselineSerialization.ToArraySegment()
                         };
-                        connection.Send(message, Channels.Unreliable);
-
-                        // quake sends unreliable messages twice to make up for message drops.
-                        // this double bandwidth, but allows for smaller buffer time / faster sync.
-                        // best to turn this off unless the game is extremely fast paced.
-                        if (unreliableRedundancy) connection.Send(message, Channels.Unreliable);
-                    }
-
-                    // if it's for a baseline sync, then send a reliable baseline message too.
-                    // this will likely arrive slightly after the unreliable delta above.
-                    if (unreliableBaselineElapsed)
-                    {
-                        if (baselineSerialization != null)
-                        {
-                            // remember last sent baseline tick for this entity.
-                            // (byte) to minimize bandwidth. we don't need the full tick,
-                            // just something small to compare against.
-                            identity.lastUnreliableBaselineSent = (byte)Time.frameCount;
-
-                            EntityStateMessageUnreliableBaseline message = new EntityStateMessageUnreliableBaseline
-                            {
-                                baselineTick = identity.lastUnreliableBaselineSent,
-                                netId = identity.netId,
-                                payload = baselineSerialization.ToArraySegment()
-                            };
-                            connection.Send(message, Channels.Reliable);
-                        }
+                        connection.Send(message, Channels.Reliable);
                     }
                 }
-                // spawned list should have no null entries because we
-                // always call Remove in OnObjectDestroy everywhere.
-                // if it does have null then someone used
-                // GameObject.Destroy instead of NetworkServer.Destroy.
-                else
-                {
-                    hasNull = true;
-                    Debug.LogWarning($"Found 'null' entry in observing list for connectionId={connection.connectionId}. Please call NetworkServer.Destroy to destroy networked objects. Don't use GameObject.Destroy.");
-                }
+                connection.DirtyObserving[i] = null;
             }
-
-            // recover from null entries.
-            // otherwise every broadcast will spam the warning and slow down performance until restart.
-            if (hasNull) connection.observing.RemoveWhere(identity => identity == null);
         }
 
         // helper function to check a connection for inactivity and disconnect if necessary
@@ -2237,9 +2246,15 @@ namespace Mirror
         internal static readonly List<NetworkConnectionToClient> connectionsCopy =
             new List<NetworkConnectionToClient>();
 
+        //CUSTOM UNITYSTATION CODE// thread Safe read Time.frameCount and Time.time
+        public static int FrameCountCash;
+        public static bool ApplicationIsPlayingCash;
+        public static float CurrentTimeCash;
+        public static bool _unreliableBaselineElapsed;
         // unreliableFullSendIntervalElapsed: indicates that unreliable sync components need a reliable baseline sync this time.
         static void Broadcast(bool unreliableBaselineElapsed)
         {
+            _unreliableBaselineElapsed = unreliableBaselineElapsed;
             // copy all connections into a helper collection so that
             // OnTransportDisconnected can be called while iterating.
             // -> OnTransportDisconnected removes from the collection
@@ -2251,12 +2266,22 @@ namespace Mirror
             connectionsCopy.Clear();
             connections.Values.CopyTo(connectionsCopy);
 
-            // go through all connections
-            foreach (NetworkConnectionToClient connection in connectionsCopy)
+            //CUSTOM UNITYSTATION CODE// Cashs Time.frameCount and Parallel loop instead of for loop
+            FrameCountCash = Time.frameCount;
+            ApplicationIsPlayingCash = Application.isPlaying;
+            CurrentTimeCash = Time.time;
+            Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
+        }
+
+        //CUSTOM UNITYSTATION CODE// Added part of Broadcast Logic
+        public static void SubConnectionBroadcast(NetworkConnectionToClient connection)
+        {
+            //CUSTOM UNITYSTATION CODE//  So we can log any errors that go on With Unity funnies with logs on Thread
+            try
             {
                 // check for inactivity. disconnects if necessary.
                 if (DisconnectIfInactive(connection))
-                    continue;
+                    return;
 
                 // has this connection joined the world yet?
                 // for each READY connection:
@@ -2275,12 +2300,22 @@ namespace Mirror
                     connection.Send(new TimeSnapshotMessage { scaledTime = NetworkTime.localScaledTime }, Channels.Unreliable);
 
                     // broadcast world state to this connection
-                    BroadcastToConnection(connection, unreliableBaselineElapsed);
+                    BroadcastToConnection(connection, _unreliableBaselineElapsed);
                 }
 
                 // update connection to flush out batched messages
                 connection.Update();
             }
+            catch (Exception e)
+            {
+                lock (connections)
+                {
+                    LogString += "\n";
+                    LogString += e.ToString();
+                }
+                throw;
+            }
+
         }
 
         // update //////////////////////////////////////////////////////////////
