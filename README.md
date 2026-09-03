@@ -1,3 +1,12 @@
+HOW TO UPDATE FOR Unitystation,
+Bump the version number in
+Mirror\Assets\Mirror\package.json
+
+Then go to the main project and
+unitystation\UnityProject\Packages\packages-lock.json
+go to "org.unitystation.spacemirror": and And delete the hash In the hash field
+And it should grab the most up-to-date version
+
 ![Mirror Logo](https://user-images.githubusercontent.com/16416509/119120944-6db26780-ba5f-11eb-9cdd-fc8500207f4d.png)
 <p align="center">
 <a href="https://assetstore.unity.com/packages/tools/network/mirror-129321"><img src="https://img.shields.io/badge/download-brightgreen.svg?style=for-the-badge&logo=unity&colorA=363a4f&colorB=f5a97f" alt="Download"></a>
