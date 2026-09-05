@@ -2068,7 +2068,8 @@ namespace Mirror
         {
             // get serialization for this entity (cached)
             // IMPORTANT: int tick avoids floating point inaccuracy over days/weeks
-            NetworkIdentitySerialization serialization = identity.GetServerSerializationAtTick(Time.frameCount, unreliableBaselineElapsed);
+            /// UNITYSTATION CODE /// Threading shenanigans  Time.frameCount -> FrameCountCash
+            NetworkIdentitySerialization serialization = identity.GetServerSerializationAtTick(FrameCountCash, unreliableBaselineElapsed);
 
             // is this entity owned by this connection?
             bool owned = identity.connectionToClient == connection;
@@ -2101,7 +2102,8 @@ namespace Mirror
         {
             // get serialization for this entity (cached)
             // IMPORTANT: int tick avoids floating point inaccuracy over days/weeks
-            NetworkIdentitySerialization serialization = identity.GetServerSerializationAtTick(Time.frameCount, unreliableBaselineElapsed);
+            /// UNITYSTATION CODE /// Threading shenanigans  Time.frameCount -> FrameCountCash
+            NetworkIdentitySerialization serialization = identity.GetServerSerializationAtTick(FrameCountCash, unreliableBaselineElapsed);
 
             // is this entity owned by this connection?
             bool owned = identity.connectionToClient == connection;
