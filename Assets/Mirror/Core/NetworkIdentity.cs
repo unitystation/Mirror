@@ -1520,7 +1520,9 @@ namespace Mirror
             {
                 if (lastSerialization.tick != tick
 #if UNITY_EDITOR
-                    || !Application.isPlaying
+                    /// UNITYSTATION CODE /// Threading stuff
+                    || !NetworkServer.ApplicationIsPlayingCash
+                    //|| !Application.isPlaying
 #endif
                    )
                 {
