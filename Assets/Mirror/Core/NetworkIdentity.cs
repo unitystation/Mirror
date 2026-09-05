@@ -1154,6 +1154,9 @@ namespace Mirror
             ValidateComponents();
             NetworkBehaviour[] components = NetworkBehaviours;
 
+            /// UNITYSTATION CODE /// So it gets Serialised properly When It spawns in
+            isDirty = true;
+
             // check which components are dirty for owner / observers.
             // this is quite complicated with SyncMode + SyncDirection.
             // see the function for explanation.
