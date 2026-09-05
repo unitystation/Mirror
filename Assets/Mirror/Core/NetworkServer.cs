@@ -2252,6 +2252,8 @@ namespace Mirror
         public static float CurrentTimeCash;
         public static bool _unreliableBaselineElapsed;
         public static double CurrentdoubleTimeCash;
+        public static double localScaledTimeCash;
+
         // unreliableFullSendIntervalElapsed: indicates that unreliable sync components need a reliable baseline sync this time.
         static void Broadcast(bool unreliableBaselineElapsed)
         {
@@ -2272,6 +2274,7 @@ namespace Mirror
             ApplicationIsPlayingCash = Application.isPlaying;
             CurrentTimeCash = Time.time;
             CurrentdoubleTimeCash = Time.unscaledTimeAsDouble;
+            localScaledTimeCash = NetworkTime.localScaledTime;
             Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
         }
 
@@ -2299,7 +2302,8 @@ namespace Mirror
                     // make sure Broadcast() is only called every sendInterval,
                     // even if targetFrameRate isn't set in host mode (!)
                     // (done via AccurateInterval)
-                    connection.Send(new TimeSnapshotMessage { scaledTime = NetworkTime.localScaledTime }, Channels.Unreliable);
+                    //CUSTOM UNITYSTATION CODE// NetworkTime.localScaledTime -> localScaledTimeCash threading shenanigans
+                    connection.Send(new TimeSnapshotMessage { scaledTime = localScaledTimeCash }, Channels.Unreliable);
 
                     // broadcast world state to this connection
                     BroadcastToConnection(connection, _unreliableBaselineElapsed);
