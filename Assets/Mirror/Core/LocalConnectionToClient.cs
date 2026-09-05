@@ -47,7 +47,9 @@ namespace Mirror
                 // OnTransportData assumes a proper batch with timestamp etc.
                 // let's make a proper batch and pass it to OnTransportData.
                 Batcher batcher = GetBatchForChannelId(Channels.Reliable);
-                batcher.AddMessage(message, NetworkTime.localTime);
+
+                /// UNITYSTATION CODE /// Threading shenanigans NetworkTime.localTime -> NetworkServer.CurrentdoubleTimeCash
+                batcher.AddMessage(message, NetworkServer.CurrentdoubleTimeCash);
 
                 using (NetworkWriterPooled batchWriter = NetworkWriterPool.Get())
                 {
