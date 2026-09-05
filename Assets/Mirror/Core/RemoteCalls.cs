@@ -143,6 +143,7 @@ namespace Mirror.RemoteCalls
                 // invoke function on this component
                 invoker.function(component, reader, senderConnection);
                 mirrorProcessingCMD = false;
+                return true;
             }
             return false;
         }
