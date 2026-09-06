@@ -521,6 +521,9 @@ namespace Mirror
         // message handlers ////////////////////////////////////////////////////
         internal static void RegisterMessageHandlers(bool hostMode)
         {
+            /// UNITYSTATION CODE /// It FUCKS things up not having messages from host
+            hostMode = false;
+
             // host mode client / remote client react to some messages differently.
             // but we still need to add handlers for all of them to avoid
             // 'message id not found' errors.
