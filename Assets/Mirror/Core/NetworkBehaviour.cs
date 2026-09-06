@@ -254,13 +254,12 @@ namespace Mirror
         // OR both bitmasks. != 0 if either was dirty.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool IsDirty() =>
-            /// UNITYSTATION CODE ///
-            // It's presumed to be dirty already since the addition of isDirty on the network component
-            true;
             // check bits first. this is basically free.
-            //(syncVarDirtyBits | syncObjectDirtyBits) != 0UL &&
-            /// only check time if bits were dirty. this is more expensive.
-            //NetworkTime.localTime - lastSyncTime >= syncInterval;
+
+            (syncVarDirtyBits | syncObjectDirtyBits) != 0UL; // &&
+        /// only check time if bits were dirty. this is more expensive.
+        /// UNITYSTATION CODE ///  We don't care about synchronised intervals
+        //NetworkTime.localTime - lastSyncTime >= syncInterval;
 
         // true if any SyncVar or SyncObject is dirty
         // OR both bitmasks. != 0 if either was dirty.
