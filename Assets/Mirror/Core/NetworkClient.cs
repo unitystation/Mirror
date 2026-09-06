@@ -537,13 +537,13 @@ namespace Mirror
                 /// UNITYSTATION CODE /// Because we need the looper back for syncvars
 
                 // host mode doesn't need spawning
-                //RegisterHandler<ObjectSpawnStartedMessage>(_ => { });
+                RegisterHandler<ObjectSpawnStartedMessage>(_ => { });
                 // host mode doesn't need spawning
-                //RegisterHandler<ObjectSpawnFinishedMessage>(_ => { });
+                RegisterHandler<ObjectSpawnFinishedMessage>(_ => { });
                 // host mode doesn't need state updates
 
-                RegisterHandler<ObjectSpawnStartedMessage>(OnObjectSpawnStarted);
-                RegisterHandler<ObjectSpawnFinishedMessage>(OnObjectSpawnFinished);
+                //RegisterHandler<ObjectSpawnStartedMessage>(OnObjectSpawnStarted);
+                //RegisterHandler<ObjectSpawnFinishedMessage>(OnObjectSpawnFinished);
                 RegisterHandler<EntityStateMessage>(OnEntityStateMessage);
                 RegisterHandler<EntityStateMessageUnreliableBaseline>(OnEntityStateMessageUnreliableBaseline);
                 RegisterHandler<EntityStateMessageUnreliableDelta>(OnEntityStateMessageUnreliableDelta);
