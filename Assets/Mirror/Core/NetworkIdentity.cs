@@ -1154,8 +1154,6 @@ namespace Mirror
             ValidateComponents();
             NetworkBehaviour[] components = NetworkBehaviours;
 
-            /// UNITYSTATION CODE /// So it gets Serialise  the next frame
-            isDirty = true;
 
             // check which components are dirty for owner / observers.
             // this is quite complicated with SyncMode + SyncDirection.
@@ -1164,10 +1162,15 @@ namespace Mirror
             // instead of writing a 1 byte index per component,
             // we limit components to 64 bits and write one ulong instead.
             // the ulong is also varint compressed for minimum bandwidth.
-            /// UNITYSTATION CODE /// Don't send ServerDirtyMasks_Spawn
-            ulong ownerMask = 0;
-            ulong observerMask = 0;
+            /// UNITYSTATION CODE ///
             //(ulong ownerMask, ulong observerMask) = ServerDirtyMasks_Spawn();
+            ServerDirtyMasks_Broadcast(
+                out ulong ownerMask, out ulong observerMask,
+                out ulong ownerMaskUnreliableBaseline, out ulong observerMaskUnreliableBaseline,
+                out ulong ownerMaskUnreliableDelta, out ulong observerMaskUnreliableDelta
+            );
+
+
 
             // if nothing dirty, then don't even write the mask.
             // otherwise, every unchanged object would send a 1 byte dirty mask!
