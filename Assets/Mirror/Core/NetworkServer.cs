@@ -2277,7 +2277,12 @@ namespace Mirror
             CurrentTimeCash = Time.time;
             CurrentdoubleTimeCash = Time.unscaledTimeAsDouble;
             localScaledTimeCash = NetworkTime.localScaledTime;
-            Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
+            foreach (var Connection in connectionsCopy)
+            {
+                SubConnectionBroadcast(Connection);
+            }
+
+            //Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
         }
 
         //CUSTOM UNITYSTATION CODE// Added part of Broadcast Logic
