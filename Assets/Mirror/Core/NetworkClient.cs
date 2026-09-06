@@ -521,8 +521,7 @@ namespace Mirror
         // message handlers ////////////////////////////////////////////////////
         internal static void RegisterMessageHandlers(bool hostMode)
         {
-            /// UNITYSTATION CODE /// It FUCKS things up not having messages from host
-            hostMode = false;
+
 
             // host mode client / remote client react to some messages differently.
             // but we still need to add handlers for all of them to avoid
@@ -539,9 +538,15 @@ namespace Mirror
                 // host mode doesn't need spawning
                 RegisterHandler<ObjectSpawnFinishedMessage>(_ => { });
                 // host mode doesn't need state updates
-                RegisterHandler<EntityStateMessage>(_ => { });
-                RegisterHandler<EntityStateMessageUnreliableBaseline>(_ => { });
-                RegisterHandler<EntityStateMessageUnreliableDelta>(_ => { });
+
+                /// UNITYSTATION CODE /// Because we need the looper back for syncvars
+                RegisterHandler<EntityStateMessage>(OnEntityStateMessage);
+                RegisterHandler<EntityStateMessageUnreliableBaseline>(OnEntityStateMessageUnreliableBaseline);
+                RegisterHandler<EntityStateMessageUnreliableDelta>(OnEntityStateMessageUnreliableDelta);
+
+                //RegisterHandler<EntityStateMessage>(_ => { });
+                //RegisterHandler<EntityStateMessageUnreliableBaseline>(_ => { });
+                //RegisterHandler<EntityStateMessageUnreliableDelta>(_ => { });
             }
             else
             {
