@@ -1477,15 +1477,16 @@ namespace Mirror
                 // Configure flags before deserializing
                 InitializeIdentityFlags(identity);
 
+                /// UNITYSTATION CODE ///  we don't need syncvars for  host in the initial spawn message
                 // Deserialize components if any payload.
                 // This will trigger SyncVar hooks via GeneratedSyncVarDeserialize.
-                if (message.payload.Count > 0)
-                {
-                    using (NetworkReaderPooled payloadReader = NetworkReaderPool.Get(message.payload))
-                    {
-                        identity.DeserializeClient(payloadReader, true);
-                    }
-                }
+                // if (message.payload.Count > 0)
+                // {
+                //     using (NetworkReaderPooled payloadReader = NetworkReaderPool.Get(message.payload))
+                //     {
+                //         identity.DeserializeClient(payloadReader, true);
+                //     }
+                // }
 
                 // Clear flag after deserialization
                 identity.hostInitialSpawn = false;
