@@ -521,8 +521,6 @@ namespace Mirror
         // message handlers ////////////////////////////////////////////////////
         internal static void RegisterMessageHandlers(bool hostMode)
         {
-
-
             // host mode client / remote client react to some messages differently.
             // but we still need to add handlers for all of them to avoid
             // 'message id not found' errors.
@@ -534,23 +532,14 @@ namespace Mirror
                 RegisterHandler<NetworkPongMessage>(_ => { }, false);
                 RegisterHandler<SpawnMessage>(OnHostClientSpawn);
 
-                /// UNITYSTATION CODE /// Because we need the looper back for syncvars
-
                 // host mode doesn't need spawning
-                //RegisterHandler<ObjectSpawnStartedMessage>(_ => { });
+                RegisterHandler<ObjectSpawnStartedMessage>(_ => { });
                 // host mode doesn't need spawning
-                //RegisterHandler<ObjectSpawnFinishedMessage>(_ => { });
+                RegisterHandler<ObjectSpawnFinishedMessage>(_ => { });
                 // host mode doesn't need state updates
-
-                RegisterHandler<ObjectSpawnStartedMessage>(OnObjectSpawnStarted);
-                RegisterHandler<ObjectSpawnFinishedMessage>(OnObjectSpawnFinished);
-                RegisterHandler<EntityStateMessage>(OnEntityStateMessage);
-                RegisterHandler<EntityStateMessageUnreliableBaseline>(OnEntityStateMessageUnreliableBaseline);
-                RegisterHandler<EntityStateMessageUnreliableDelta>(OnEntityStateMessageUnreliableDelta);
-
-                //RegisterHandler<EntityStateMessage>(_ => { });
-                //RegisterHandler<EntityStateMessageUnreliableBaseline>(_ => { });
-                //RegisterHandler<EntityStateMessageUnreliableDelta>(_ => { });
+                RegisterHandler<EntityStateMessage>(_ => { });
+                RegisterHandler<EntityStateMessageUnreliableBaseline>(_ => { });
+                RegisterHandler<EntityStateMessageUnreliableDelta>(_ => { });
             }
             else
             {

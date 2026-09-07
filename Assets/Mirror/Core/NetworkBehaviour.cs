@@ -590,7 +590,9 @@ namespace Mirror
                     // changes syncvar, calling hook again.
                     // IMPORTANT: only call hook if object is visible to host client (in NetworkClient.spawned).
                     // This prevents hooks from firing at spawn for objects out of AOI range.
-                    if (NetworkServer.activeHost && !GetSyncVarHookGuard(dirtyBit) && NetworkClient.spawned.ContainsKey(netIdentity.netId))
+                    /// UNITYSTATION CODE /// Because the hook doesn't trigger If it's done before it receives the spawn message,
+                    /// That's done Next frame after spawning NetworkClient + We don't care about interest management NetworkClient -> NetworkServer
+                    if (NetworkServer.activeHost && !GetSyncVarHookGuard(dirtyBit) && NetworkServer.spawned.ContainsKey(netIdentity.netId))
                     {
                         SetSyncVarHookGuard(dirtyBit, true);
                         OnChanged(oldValue, value);
@@ -619,7 +621,9 @@ namespace Mirror
                     // changes syncvar, calling hook again.
                     // IMPORTANT: only call hook if object is visible to host client (in NetworkClient.spawned).
                     // This prevents hooks from firing at spawn for objects out of AOI range.
-                    if (NetworkServer.activeHost && !GetSyncVarHookGuard(dirtyBit) && NetworkClient.spawned.ContainsKey(netIdentity.netId))
+                    /// UNITYSTATION CODE /// Because the hook doesn't trigger If it's done before it receives the spawn message,
+                    /// That's done Next frame after spawning NetworkClient + We don't care about interest management NetworkClient -> NetworkServer
+                    if (NetworkServer.activeHost && !GetSyncVarHookGuard(dirtyBit) && NetworkServer.spawned.ContainsKey(netIdentity.netId))
                     {
                         SetSyncVarHookGuard(dirtyBit, true);
                         OnChanged(oldValue, value);
@@ -648,7 +652,9 @@ namespace Mirror
                     // changes syncvar, calling hook again.
                     // IMPORTANT: only call hook if object is visible to host client (in NetworkClient.spawned).
                     // This prevents hooks from firing at spawn for objects out of AOI range.
-                    if (NetworkServer.activeHost && !GetSyncVarHookGuard(dirtyBit) && NetworkClient.spawned.ContainsKey(netIdentity.netId))
+                    /// UNITYSTATION CODE /// Because the hook doesn't trigger If it's done before it receives the spawn message,
+                    /// That's done Next frame after spawning NetworkClient + We don't care about interest management NetworkClient -> NetworkServer
+                    if (NetworkServer.activeHost && !GetSyncVarHookGuard(dirtyBit) && NetworkServer.spawned.ContainsKey(netIdentity.netId))
                     {
                         SetSyncVarHookGuard(dirtyBit, true);
                         OnChanged(oldValue, value);
@@ -688,7 +694,9 @@ namespace Mirror
                     // changes syncvar, calling hook again.
                     // IMPORTANT: only call hook if object is visible to host client (in NetworkClient.spawned).
                     // This prevents hooks from firing at spawn for objects out of AOI range.
-                    if (NetworkServer.activeHost && !GetSyncVarHookGuard(dirtyBit) && NetworkClient.spawned.ContainsKey(netIdentity.netId))
+                    /// UNITYSTATION CODE /// Because the hook doesn't trigger If it's done before it receives the spawn message,
+                    /// That's done Next frame after spawning NetworkClient + We don't care about interest management NetworkClient -> NetworkServer
+                    if (NetworkServer.activeHost && !GetSyncVarHookGuard(dirtyBit) && NetworkServer.spawned.ContainsKey(netIdentity.netId))
                     {
                         SetSyncVarHookGuard(dirtyBit, true);
                         OnChanged(oldValue, value);

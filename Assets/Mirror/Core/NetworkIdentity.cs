@@ -1162,7 +1162,7 @@ namespace Mirror
             // instead of writing a 1 byte index per component,
             // we limit components to 64 bits and write one ulong instead.
             // the ulong is also varint compressed for minimum bandwidth.
-            /// UNITYSTATION CODE ///
+            /// UNITYSTATION CODE /// Because sending all of the synchvars Is dumb and results in null getting set on host
             //(ulong ownerMask, ulong observerMask) = ServerDirtyMasks_Spawn();
             ServerDirtyMasks_Broadcast(
                 out ulong ownerMask, out ulong observerMask,
