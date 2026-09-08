@@ -134,7 +134,8 @@ namespace Mirror
             //
             // NOTE: we do NOT ValidatePacketSize here yet. the final packet
             //       will be the full batch, including timestamp.
-            GetBatchForChannelId(channelId).AddMessage(segment, NetworkTime.localTime);
+            /// UNITYSTATION CODE /// Threading shenanigans NetworkTime.TimeCash -> NetworkServer.localTimeCash
+            GetBatchForChannelId(channelId).AddMessage(segment, NetworkServer.localTimeCash);
         }
 
         // Send stage three: hand off to transport

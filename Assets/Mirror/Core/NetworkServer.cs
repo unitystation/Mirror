@@ -2255,6 +2255,7 @@ namespace Mirror
         public static bool _unreliableBaselineElapsed;
         public static double CurrentdoubleTimeCash;
         public static double localScaledTimeCash;
+        public static double localTimeCash;
 
         // unreliableFullSendIntervalElapsed: indicates that unreliable sync components need a reliable baseline sync this time.
         static void Broadcast(bool unreliableBaselineElapsed)
@@ -2277,6 +2278,8 @@ namespace Mirror
             CurrentTimeCash = Time.time;
             CurrentdoubleTimeCash = Time.unscaledTimeAsDouble;
             localScaledTimeCash = NetworkTime.localScaledTime;
+            localTimeCash = NetworkTime.localTime;
+
             Parallel.ForEach(connectionsCopy, SubConnectionBroadcast);
         }
 
